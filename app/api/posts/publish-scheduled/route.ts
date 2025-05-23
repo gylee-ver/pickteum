@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import supabase from '@/lib/supabase'
 
-// 예약된 글들을 자동으로 발행하는 API
+// 환경 변수 체크
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 export async function POST(request: NextRequest) {
+  // 환경 변수가 없으면 에러 대신 경고 반환
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('Supabase 환경 변수가 설정되지 않았습니다.')
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Supabase configuration missing',
+      message: '환경 변수를 확인해주세요.' 
+    }, { status: 500 })
+  }
+
   try {
+    // Supabase 클라이언트를 동적으로 생성
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
     console.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
     
     // 현재 시간 (UTC)
@@ -14,7 +30,7 @@ export async function POST(request: NextRequest) {
       .from('articles')
       .select('id, title, published_at')
       .eq('status', 'scheduled')
-      .lte('published_at', now) // published_at이 현재 시간보다 과거
+      .lte('published_at', now)
       .not('published_at', 'is', null)
 
     if (fetchError) {
@@ -46,7 +62,7 @@ export async function POST(request: NextRequest) {
       .from('articles')
       .update({ 
         status: 'published',
-        updated_at: new Date().toISOString() // 수정 시간 업데이트
+        updated_at: new Date().toISOString()
       })
       .in('id', articleIds)
       .select('id, title, published_at')
