@@ -21,6 +21,9 @@ import { cn } from "@/lib/utils"
 import { Bold, FolderOpen, Globe, Italic, Search } from "lucide-react"
 import { useStorageBucket } from "@/lib/supabase"
 import supabase from "@/lib/supabase"
+import { ImageAltTipsModal } from "@/components/admin/ImageAltTipsModal"
+import { HelpCircle } from "lucide-react"
+import { SaveConfirmModal } from "@/components/admin/SaveConfirmModal"
 
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const CATEGORIES = [
@@ -51,6 +54,12 @@ export default function NewPostPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<string | null>(null)
   const [categories, setCategories] = useState<any[]>([])
+  const [altText, setAltText] = useState("")
+  const [showAltTips, setShowAltTips] = useState(false)
+  const [isAltRequired, setIsAltRequired] = useState(false)
+  const [savedArticleId, setSavedArticleId] = useState<string | null>(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -277,7 +286,6 @@ export default function NewPostPage() {
     }
 
     try {
-      // 업로드 시작 토스트
       toast({
         title: "이미지 업로드 중...",
         description: "잠시만 기다려주세요.",
@@ -300,16 +308,31 @@ export default function NewPostPage() {
         return
       }
 
-      // 업로드 성공 시 공개 URL 생성
       const { data: publicUrlData } = bucket.getPublicUrl(filePath)
       const imageUrl = publicUrlData.publicUrl
       
-      console.log('이미지 업로드 성공:', imageUrl)
+      // alt 텍스트 입력 필수화
+      setIsAltRequired(true)
+      const altText = await new Promise<string>((resolve) => {
+        const text = prompt("이미지 설명을 입력하세요 (필수):")
+        if (!text) {
+          toast({
+            variant: "destructive",
+            title: "alt 텍스트 필수",
+            description: "이미지 설명은 필수 입력 사항입니다.",
+          })
+          resolve("")
+          return
+        }
+        resolve(text)
+      })
 
-      // 대체 텍스트 입력받기
-      const altText = prompt("이미지 설명을 입력하세요 (선택사항):") || file.name.split('.')[0]
+      if (!altText) {
+        // 업로드된 이미지 삭제
+        await bucket.remove([filePath])
+        return
+      }
       
-      // 마크다운 형식으로 이미지 삽입
       insertText("![", `](${imageUrl})`, altText)
 
       toast({
@@ -317,8 +340,8 @@ export default function NewPostPage() {
         description: "이미지가 성공적으로 업로드되고 삽입되었습니다.",
       })
 
-    } catch (uploadError) {
-      console.error('이미지 업로드 예외:', uploadError)
+    } catch (error) {
+      console.error('이미지 업로드 예외:', error)
       toast({
         variant: "destructive",
         title: "이미지 업로드 실패",
@@ -326,7 +349,6 @@ export default function NewPostPage() {
       })
     }
 
-    // 파일 input 초기화
     if (e.target) {
       e.target.value = ''
     }
@@ -355,7 +377,7 @@ export default function NewPostPage() {
   }
 
   // 썸네일 업로드 처리
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -381,10 +403,10 @@ export default function NewPostPage() {
 
     setThumbnailFile(file)
 
-    // 이미지 미리보기 생성
     const reader = new FileReader()
     reader.onload = (e) => {
       setThumbnail(e.target?.result as string)
+      setIsAltRequired(true) // 썸네일 업로드 시 alt 텍스트 필수화
     }
     reader.readAsDataURL(file)
   }
@@ -424,7 +446,23 @@ export default function NewPostPage() {
   }
 
   // 저장 처리
-  const handleSave = async (publish = false) => {
+  const handleSave = async (publish = false, force = false) => {
+    // alt 텍스트 검증
+    if (thumbnail && !altText.trim()) {
+      toast({
+        variant: "destructive",
+        title: "alt 텍스트 필수",
+        description: "썸네일 이미지의 대체 텍스트를 입력해주세요.",
+      })
+      return
+    }
+
+    // 발행하기인데 이미 저장된 초안이 있는 경우 (force가 아닐 때만)
+    if (publish && savedArticleId && !force) {
+      setShowPublishModal(true)
+      return
+    }
+
     setIsSaving(true)
 
     try {
@@ -518,16 +556,18 @@ export default function NewPostPage() {
         return
       }
 
-      // 기본 slug 생성
-      const baseSlug = slug || title.toLowerCase()
-        .replace(/[^a-z0-9가-힣\s]/g, "")  // 특수문자 제거
-        .trim()
-        .replace(/\s+/g, "-")  // 공백을 하이픈으로
-        .replace(/-+/g, "-")   // 연속된 하이픈을 하나로
-        .replace(/^-|-$/g, "") // 앞뒤 하이픈 제거
+      // 기본 slug 생성 (저장된 아티클이 없는 경우에만)
+      let uniqueSlug = slug
+      if (!savedArticleId) {
+        const baseSlug = slug || title.toLowerCase()
+          .replace(/[^a-z0-9가-힣\s]/g, "")
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-")
+          .replace(/^-|-$/g, "")
 
-      // 고유한 slug 생성
-      const uniqueSlug = await generateUniqueSlug(baseSlug)
+        uniqueSlug = await generateUniqueSlug(baseSlug)
+      }
 
       // Article 데이터 준비
       const articleData = {
@@ -535,103 +575,100 @@ export default function NewPostPage() {
         content: content.trim(),
         category_id: categoryId,
         author: author || 'pickteum1',
-        slug: uniqueSlug,  // 고유한 slug 사용
+        slug: uniqueSlug,
         status: publish ? 'published' : 'draft',
         thumbnail: thumbnailUrl,
+        thumbnail_alt: altText.trim() || null,
         seo_title: seoTitle || title,
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         published_at: publish ? new Date().toISOString() : null,
-        views: 0  // 초기 조회수 설정
+        views: 0
       }
 
       console.log('저장할 아티클 데이터:', JSON.stringify(articleData, null, 2))
-      console.log('생성된 고유 slug:', uniqueSlug)
+      console.log('savedArticleId:', savedArticleId)
 
-      // Supabase에 아티클 저장
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([articleData])
-        .select()
-        .single()
+      let result
 
-      if (error) {
-        // 상세한 에러 로깅
+      if (savedArticleId) {
+        // 기존 아티클 업데이트
+        console.log('기존 아티클 업데이트 중...')
+        const { data, error } = await supabase
+          .from('articles')
+          .update(articleData)
+          .eq('id', savedArticleId)
+          .select()
+          .single()
+
+        result = { data, error }
+      } else {
+        // 새 아티클 생성
+        console.log('새 아티클 생성 중...')
+        const { data, error } = await supabase
+          .from('articles')
+          .insert([articleData])
+          .select()
+          .single()
+
+        result = { data, error }
+      }
+
+      if (result.error) {
         console.error('==== Supabase 에러 상세 정보 ====')
-        console.error('전체 에러 객체:', JSON.stringify(error, null, 2))
-        console.error('에러 메시지:', error.message)
-        console.error('에러 코드:', error.code)
-        console.error('에러 세부사항:', error.details)
-        console.error('에러 힌트:', error.hint)
-        console.error('전송된 데이터:', JSON.stringify(articleData, null, 2))
+        console.error('전체 에러 객체:', JSON.stringify(result.error, null, 2))
         console.error('================================')
         
-        // slug 관련 에러인 경우 특별 처리
-        if (error.code === '23505' && error.message.includes('articles_slug_key')) {
-          toast({
-            variant: "destructive",
-            title: "URL 슬러그 중복",
-            description: "유사한 제목의 글이 이미 존재합니다. 제목을 조금 수정해주세요.",
-          })
-        } else {
-          // 기존 에러 처리 로직
-          let errorMessage = '알 수 없는 오류가 발생했습니다.'
-          
-          if (error.message) {
-            errorMessage = error.message
-          } else if (error.code) {
-            errorMessage = `에러 코드: ${error.code}`
-          }
-
-          toast({
-            variant: "destructive",
-            title: "저장 실패",
-            description: `아티클 저장 중 오류가 발생했습니다: ${errorMessage}`,
-          })
-        }
+        toast({
+          variant: "destructive",
+          title: "저장 실패",
+          description: `아티클 저장 중 오류가 발생했습니다: ${result.error.message}`,
+        })
         
         setIsSaving(false)
         return
       }
 
-      // 성공 시 slug 상태도 업데이트
-      setSlug(uniqueSlug)
-
-      console.log('아티클 저장 성공:', data)
-      setLastSaved(new Date().toLocaleTimeString())
-
-      if (publish) {
-        setIsPublished(true)
-        setStatus("published")
-        toast({
-          title: "콘텐츠가 발행되었습니다.",
-          description: `성공적으로 발행되었습니다. (URL: ${uniqueSlug})`,
-        })
-      } else {
-        toast({
-          title: "저장되었습니다.",
-          description: `마지막 저장: ${new Date().toLocaleTimeString()}`,
-        })
+      // 성공 시 처리
+      if (!savedArticleId) {
+        setSavedArticleId(result.data.id)
+        setSlug(uniqueSlug)
       }
 
-      // 저장 후 목록 페이지로 이동
+      console.log(`아티클 ${publish ? '발행' : '저장'} 성공:`, result.data)
+
+      setIsSaving(false)
+
       if (publish) {
-        router.push("/admin/posts")
+        toast({
+          title: "발행 완료!",
+          description: "아티클이 성공적으로 발행되었습니다.",
+        })
+        
+        // 발행 후 페이지 이동
+        setTimeout(() => {
+          router.push('/admin/posts')
+        }, 1500)
+      } else {
+        // 저장 완료 모달 표시
+        setShowSaveModal(true)
       }
 
     } catch (error) {
-      console.error('==== 저장 중 예외 발생 ====')
-      console.error('예외 객체:', error)
-      console.error('==========================')
-      
+      console.error('저장 처리 예외:', error)
       toast({
         variant: "destructive",
         title: "저장 실패",
-        description: "저장 중 예상치 못한 오류가 발생했습니다.",
+        description: "예상치 못한 오류가 발생했습니다.",
       })
-    } finally {
       setIsSaving(false)
     }
+  }
+
+  // 발행 확인 처리
+  const handlePublishConfirm = async () => {
+    console.log('발행 확인됨, handleSave 호출 중...')
+    await handleSave(true, true) // force = true로 설정
   }
 
   // 예약 발행 처리 (시간대 문제 완전 해결)
@@ -1336,9 +1373,22 @@ export default function NewPostPage() {
 
               {thumbnail && (
                 <div className="space-y-2">
-                  <Label htmlFor="alt-text">대체 텍스트 (ALT)</Label>
-                  <Input id="alt-text" placeholder="이미지 설명 입력" />
-                  <p className="text-xs text-gray-500">검색 엔진과 스크린 리더를 위한 이미지 설명</p>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="alt-text" className="flex items-center">
+                      대체 텍스트 (ALT)
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                  </div>
+                  <Input
+                    id="alt-text"
+                    value={altText}
+                    onChange={(e) => setAltText(e.target.value)}
+                    placeholder="이미지 설명 입력 (필수)"
+                    className={!altText.trim() ? "border-red-300" : ""}
+                  />
+                  <p className="text-xs text-gray-500">
+                    검색 엔진과 스크린 리더를 위한 이미지 설명 (필수 입력)
+                  </p>
                 </div>
               )}
             </div>
@@ -1408,6 +1458,28 @@ export default function NewPostPage() {
           </div>
         </div>
       </div>
+
+      {/* Alt 텍스트 작성 팁 모달 */}
+      <ImageAltTipsModal
+        open={showAltTips}
+        onOpenChange={setShowAltTips}
+      />
+
+      {/* 저장 완료 모달 */}
+      <SaveConfirmModal
+        open={showSaveModal}
+        onOpenChange={setShowSaveModal}
+        type="saved"
+      />
+
+      {/* 발행 확인 모달 */}
+      <SaveConfirmModal
+        open={showPublishModal}
+        onOpenChange={setShowPublishModal}
+        type="publish-confirm"
+        onConfirm={handlePublishConfirm}
+        onCancel={() => setShowPublishModal(false)}
+      />
     </AdminLayout>
   )
 }

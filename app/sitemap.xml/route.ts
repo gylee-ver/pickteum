@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import supabase from "@/lib/supabase"
+import { generateSitemapSchema } from "@/lib/structured-data"
 
 export async function GET() {
   try {
@@ -20,7 +21,20 @@ export async function GET() {
     // 게시글 목록 가져오기
     const { data: articles, error: articlesError } = await supabase
       .from('articles')
-      .select('slug, updated_at')
+      .select(`
+        slug, 
+        updated_at, 
+        title, 
+        thumbnail, 
+        published_at, 
+        created_at, 
+        author,
+        category:categories(
+          id,
+          name,
+          color
+        )
+      `)
       .eq('status', 'published')
       .order('updated_at', { ascending: false })
 
@@ -39,8 +53,12 @@ export async function GET() {
       throw categoriesError
     }
 
-    // XML 시작 부분
+    // 🔥 구조화된 데이터 생성 (사이트맵용)
+    const sitemapSchema = generateSitemapSchema(articles || [])
+
+    // XML 시작 부분 + 구조화된 데이터 주석
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<!-- 구조화된 데이터: ${JSON.stringify(sitemapSchema)} -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `
 
@@ -59,14 +77,14 @@ export async function GET() {
     categories?.forEach(category => {
       sitemap += `
   <url>
-    <loc>${baseUrl}/category/${category.name.toLowerCase()}</loc>
+    <loc>${baseUrl}/category/${encodeURIComponent(category.name)}</loc>
     <lastmod>${date}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`
     })
 
-    // 게시글 URL 추가
+    // 아티클 URL 추가
     articles?.forEach(article => {
       sitemap += `
   <url>
@@ -83,13 +101,29 @@ export async function GET() {
 
     return new NextResponse(sitemap, {
       headers: {
-        "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+        'Content-Type': 'application/xml',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
     })
 
   } catch (error) {
     console.error('사이트맵 생성 오류:', error)
-    return new NextResponse('Error generating sitemap', { status: 500 })
+    
+    // 오류 시 기본 사이트맵 반환
+    const fallbackSitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://pickteum.com</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`
+
+    return new NextResponse(fallbackSitemap, {
+      headers: {
+        'Content-Type': 'application/xml',
+      },
+    })
   }
 }
