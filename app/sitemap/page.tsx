@@ -1,11 +1,8 @@
 import Link from "next/link"
 import { ArrowLeft, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
 
 export default function SitemapPage() {
-  const [status, setStatus] = useState("published")
-
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen">
