@@ -2,9 +2,68 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: {
+    template: '%s | 틈 날 땐? 픽틈!',
+    default: '틈 날 땐? 픽틈!'
+  },
+  description: '당신의 정크 타임을, 스마일 타임으로!',
+  generator: 'Next.js',
+  applicationName: '픽틈',
+  referrer: 'origin-when-cross-origin',
+  keywords: ['픽틈', '뉴스', '정크타임', '스마일타임', '콘텐츠', '정보'],
+  authors: [{ name: '픽틈' }],
+  creator: '픽틈',
+  publisher: '픽틈',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://pickteum.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: '틈 날 땐? 픽틈!',
+    description: '당신의 정크 타임을, 스마일 타임으로!',
+    url: 'https://pickteum.com',
+    siteName: '픽틈',
+    images: [
+      {
+        url: '/pickteum_og.png',
+        width: 1200,
+        height: 630,
+        alt: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
+      },
+    ],
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: '/pickteum_favicon.ico',
+    shortcut: '/pickteum_favicon.ico',
+    apple: '/pickteum_favicon.ico',
+    other: {
+      rel: 'apple-touch-icon-precomposed',
+      url: '/pickteum_favicon.ico',
+    },
+  },
+  verification: {
+    google: 'google-site-verification=YOUR_CODE',
+    naver: 'naver-site-verification=YOUR_CODE',
+  },
+  category: '뉴스',
 }
 
 export default function RootLayout({
@@ -13,7 +72,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="ko">
+      <head>
+        {/* 네이버 서치어드바이저 메타태그 */}
+        <meta name="naver-site-verification" content="YOUR_CODE" />
+        
+        {/* 다음 서치어드바이저 메타태그 */}
+        <meta name="kakao-site-verification" content="YOUR_CODE" />
+      </head>
       <body>{children}</body>
     </html>
   )
