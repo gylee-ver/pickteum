@@ -538,14 +538,9 @@ export default function AnalyticsPage() {
           {/* 인기 콘텐츠 */}
           <Card className="overflow-hidden transition-all hover:shadow-md">
             <CardHeader>
-              <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>인기 콘텐츠</CardTitle>
                   <CardDescription>조회수 기준 상위 콘텐츠</CardDescription>
-                </div>
-                <Button variant="outline" size="sm">
-                  전체 보기
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -598,6 +593,11 @@ export default function AnalyticsPage() {
                 </table>
               </div>
             </CardContent>
+            <CardFooter className="flex justify-end bg-gray-50 border-t p-4">
+              <Button variant="outline" size="sm">
+                통계 분석 페이지로 이동
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
 

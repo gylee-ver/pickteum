@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import supabase from '@/lib/supabase'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -134,7 +135,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/posts", icon: FileText, label: "콘텐츠 관리", shortcut: "Alt+2" },
     { href: "/admin/media", icon: ImageIcon, label: "미디어 라이브러리", shortcut: "Alt+3" },
     { href: "/admin/analytics", icon: BarChart3, label: "통계 분석", shortcut: "Alt+4" },
-    { href: "/admin/users", icon: Users, label: "사용자 관리", shortcut: "Alt+5" },
     { href: "/admin/settings", icon: Settings, label: "설정", shortcut: "Alt+6" },
   ]
 
@@ -148,25 +148,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* 사이드바 */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transition-all duration-300 md:translate-x-0 md:static flex flex-col",
+          "fixed top-0 left-0 z-50 h-full bg-gray-50 border-r border-gray-200 shadow-md transition-all duration-300 md:translate-x-0 md:static flex flex-col",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full",
           isSidebarCollapsed ? "w-20" : "w-64",
         )}
       >
         {/* 사이드바 헤더 */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 flex-shrink-0 bg-white">
           <Link href="/admin/dashboard" className="flex items-center">
             {!isSidebarCollapsed ? (
               <div className="flex items-center">
-                <Image src="/logo.png" alt="Pickteum" width={32} height={32} className="mr-2" />
-                <span className="text-xl font-bold">
-                  <span className="text-[#212121]">Pick</span>
-                  <span className="text-[#FFC83D]">teum</span>
-                </span>
+                <Image src="/logo_vec.png" alt="Pickteum" width={32} height={32} className="mr-2" />
               </div>
             ) : (
               <div className="flex justify-center w-full">
-                <Image src="/logo.png" alt="Pickteum" width={28} height={28} />
+                <Image src="/logo_vec.png" alt="Pickteum" width={28} height={28} />
               </div>
             )}
           </Link>
@@ -224,7 +220,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* 사이드바 푸터 */}
         <div
           className={cn(
-            "p-4 border-t border-gray-200 flex-shrink-0",
+            "p-4 border-t border-gray-200 shadow-sm flex-shrink-0 bg-white",
             isSidebarCollapsed ? "flex flex-col items-center" : "",
           )}
         >

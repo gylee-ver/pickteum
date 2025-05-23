@@ -5,9 +5,12 @@ import ContentCard from "@/components/content-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCategory } from "@/contexts/category-context"
 import { Button } from "@/components/ui/button"
+import supabase from "@/lib/supabase"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 
-// 샘플 데이터
-const SAMPLE_CONTENT = [
+// 백업용 샘플 데이터 (API 로드 실패 시 사용)
+const FALLBACK_CONTENT = [
   {
     id: "1",
     title: "건강한 식습관으로 면역력 높이는 7가지 방법",
@@ -22,116 +25,136 @@ const SAMPLE_CONTENT = [
     thumbnail: "/baseball-stadium.png",
     date: "2025.05.09",
   },
-  {
-    id: "3",
-    title: "글로벌 경제 불확실성 속 투자 전략",
-    category: { name: "경제", color: "#FF9800" },
-    thumbnail: "/stock-market-chart.png",
-    date: "2025.05.08",
-  },
-  {
-    id: "4",
-    title: "최신 인공지능 기술이 바꾸는 일상생활",
-    category: { name: "테크", color: "#607D8B" },
-    thumbnail: "/artificial-intelligence-network.png",
-    date: "2025.05.07",
-  },
-  {
-    id: "5",
-    title: "정부, 신규 주택 공급 정책 발표... 부동산 시장 영향은?",
-    category: { name: "정치/시사", color: "#9C27B0" },
-    thumbnail: "/placeholder.svg?key=qjak0",
-    date: "2025.05.06",
-  },
-  {
-    id: "6",
-    title: "여름철 건강관리 팁: 무더위 속 체력 유지하기",
-    category: { name: "건강", color: "#4CAF50" },
-    thumbnail: "/placeholder.svg?key=sum01",
-    date: "2025.05.05",
-  },
-  {
-    id: "7",
-    title: "올림픽 메달 유망주 분석: 한국 선수단 전망",
-    category: { name: "스포츠", color: "#2196F3" },
-    thumbnail: "/placeholder.svg?key=oly01",
-    date: "2025.05.04",
-  },
-  {
-    id: "8",
-    title: "디지털 노마드 라이프스타일: 원격 근무의 장단점",
-    category: { name: "라이프", color: "#FF5722" },
-    thumbnail: "/placeholder.svg?key=dig01",
-    date: "2025.05.03",
-  },
-  {
-    id: "9",
-    title: "블록체인 기술의 미래: 금융을 넘어선 활용 사례",
-    category: { name: "테크", color: "#607D8B" },
-    thumbnail: "/placeholder.svg?key=blo01",
-    date: "2025.05.02",
-  },
-  {
-    id: "10",
-    title: "국제 무역 분쟁이 소비자 물가에 미치는 영향",
-    category: { name: "경제", color: "#FF9800" },
-    thumbnail: "/placeholder.svg?key=eco01",
-    date: "2025.05.01",
-  },
-]
-
-// 더 많은 콘텐츠 데이터 (무한 스크롤용)
-const MORE_CONTENT = [
-  {
-    id: "11",
-    title: "면역력 강화를 위한 비타민 섭취 가이드",
-    category: { name: "건강", color: "#4CAF50" },
-    thumbnail: "/placeholder.svg?key=vit01",
-    date: "2025.04.30",
-  },
-  {
-    id: "12",
-    title: "프로축구 리그 중계권 분쟁, 팬들의 시청권은?",
-    category: { name: "스포츠", color: "#2196F3" },
-    thumbnail: "/placeholder.svg?key=soc01",
-    date: "2025.04.29",
-  },
 ]
 
 export default function ContentFeed() {
   const { activeCategory } = useCategory()
-  const [content, setContent] = useState(SAMPLE_CONTENT)
-  const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const loadingRef = useRef(false)
+  const pageSize = 5
+
+  // 카테고리 데이터 로드
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+        
+        if (error) {
+          console.error('카테고리 로드 오류:', error)
+          return
+        }
+        
+        setCategories(data || [])
+      } catch (err) {
+        console.error('카테고리 로드 중 예외:', err)
+      }
+    }
+    
+    loadCategories()
+  }, [])
+
+  // 글 데이터 로드
+  useEffect(() => {
+    loadArticles()
+  }, [activeCategory, page])
+
+  const loadArticles = async () => {
+    if (loadingRef.current) return
+    
+    setLoading(true)
+    loadingRef.current = true
+    
+    try {
+      // Supabase 쿼리 구성
+      let query = supabase
+        .from('articles')
+        .select(`
+          *,
+          categories:category_id (name, color)
+        `)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1)
+      
+      // 카테고리 필터링
+      if (activeCategory !== '전체') {
+        // 카테고리 ID 찾기
+        const categoryId = categories.find(cat => cat.name === activeCategory)?.id
+        if (categoryId) {
+          query = query.eq('category_id', categoryId)
+        }
+      }
+      
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('아티클 로드 오류:', error)
+        setError(true)
+        return
+      }
+      
+      console.log('로드된 아티클:', data)
+      
+      // 아티클 데이터 변환
+      const formattedData = data.map(article => ({
+        id: article.id,
+        title: article.title,
+        category: {
+          name: article.categories?.name || '미분류',
+          color: article.categories?.color || '#cccccc'
+        },
+        thumbnail: article.thumbnail || '/placeholder.svg',
+        date: article.published_at ? 
+          format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
+          format(new Date(), 'yyyy.MM.dd', { locale: ko })
+      }))
+      
+      if (page === 1) {
+        setContent(formattedData)
+      } else {
+        setContent(prev => [...prev, ...formattedData])
+      }
+      
+      // 더 불러올 데이터가 있는지 확인
+      setHasMore(data.length === pageSize)
+      
+    } catch (err) {
+      console.error('아티클 로드 중 예외:', err)
+      setError(true)
+    } finally {
+      setLoading(false)
+      loadingRef.current = false
+    }
+  }
 
   // 필터링된 콘텐츠
-  const filteredContent = content.filter((item) => activeCategory === "전체" || item.category.name === activeCategory)
-
-  // 전체 탭에서는 5개만 표시
-  const displayedContent = activeCategory === "전체" ? filteredContent.slice(0, 5) : filteredContent
-
-  // 더보기 버튼 표시 여부
-  const showMoreButton = activeCategory === "전체" && filteredContent.length > 5
+  const filteredContent = content.length > 0 ? content : (error ? FALLBACK_CONTENT : [])
+  
+  // 전체 탭에서는 기본 5개만 표시
+  const displayedContent = activeCategory === "전체" && page === 1 ? 
+    filteredContent.slice(0, 5) : filteredContent
 
   const handleLoadMore = () => {
-    if (activeCategory === "전체") {
-      // 전체 탭에서는 모든 콘텐츠 표시
-      setPage((prev) => prev + 1)
-    }
+    setPage(prev => prev + 1)
   }
 
   // 스크롤 이벤트 핸들러 참조 저장
   const scrollHandlerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    // 카테고리가 변경되면 스크롤을 맨 위로 이동
+    // 카테고리가 변경되면 스크롤을 맨 위로 이동하고 페이지 초기화
     window.scrollTo(0, 0)
+    setPage(1)
   }, [activeCategory])
 
   useEffect(() => {
-    if (activeCategory === "전체") return // 전체 탭에서는 무한 스크롤 비활성화
-
     // 이전 스크롤 위치 저장
     let lastScrollY = window.scrollY
 
@@ -146,9 +169,10 @@ export default function ContentFeed() {
         isScrollingDown &&
         window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 &&
         !loading &&
-        !loadingRef.current
+        !loadingRef.current &&
+        hasMore
       ) {
-        loadMoreContent()
+        handleLoadMore()
       }
     }
 
@@ -168,21 +192,7 @@ export default function ContentFeed() {
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [loading, activeCategory])
-
-  const loadMoreContent = () => {
-    if (loadingRef.current || loading) return
-
-    setLoading(true)
-    loadingRef.current = true
-
-    // 실제로는 API 호출을 통해 데이터를 가져옴
-    setTimeout(() => {
-      setContent((prev) => [...prev, ...MORE_CONTENT])
-      setLoading(false)
-      loadingRef.current = false
-    }, 1500)
-  }
+  }, [loading, hasMore])
 
   if (displayedContent.length === 0 && !loading) {
     return (
@@ -221,7 +231,7 @@ export default function ContentFeed() {
         </div>
       )}
 
-      {showMoreButton && (
+      {hasMore && !loading && (
         <div className="flex justify-center mt-6">
           <Button
             onClick={handleLoadMore}

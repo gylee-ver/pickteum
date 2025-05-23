@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
 import AdminLayout from "@/components/admin/layout"
 import { Button } from "@/components/ui/button"
@@ -11,16 +11,41 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Calendar, Clock, Code, Eye, FileText, ImageIcon, Link, List, ListOrdered, Save, Type } from "lucide-react"
+import { Calendar, Clock, Code, Eye, FileText, ImageIcon, Link, List, ListOrdered, Save, Type, AlertCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { Bold, FolderOpen, Globe, Italic, Search } from "lucide-react"
+import { Bold, FolderOpen, Globe, Italic, Search, Trash2 } from "lucide-react"
 import { useStorageBucket } from "@/lib/supabase"
 import supabase from "@/lib/supabase"
+
+// 타입 정의
+interface Category {
+  id: string
+  name: string
+  color: string
+}
+
+interface Article {
+  id: string
+  title: string
+  content: string
+  category_id: string
+  author: string
+  slug: string
+  status: 'published' | 'draft' | 'scheduled'
+  thumbnail: string | null
+  seo_title: string | null
+  seo_description: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+  views: number
+  tags: string[] | null
+}
 
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const CATEGORIES = [
@@ -32,7 +57,12 @@ const CATEGORIES = [
   { name: "테크", color: "#607D8B" },
 ]
 
-export default function NewPostPage() {
+export default function EditPostPage() {
+  // URL 파라미터에서 ID 추출
+  const params = useParams()
+  const articleId = params.id as string
+
+  // 상태 정의
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [category, setCategory] = useState("")
@@ -49,8 +79,11 @@ export default function NewPostPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [isHtmlMode, setIsHtmlMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
   const [lastSaved, setLastSaved] = useState<string | null>(null)
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [originalArticle, setOriginalArticle] = useState<Article | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -58,68 +91,92 @@ export default function NewPostPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  // 카테고리 데이터 로드
+  // 아티클 데이터 로드
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadArticleData = async () => {
       try {
-        const { data, error } = await supabase
+        setIsLoading(true)
+        setIsError(false)
+
+        // 카테고리 로드
+        const { data: categoriesData, error: categoriesError } = await supabase
           .from('categories')
           .select('*')
-        
-        if (error) {
-          console.error('카테고리 로드 오류:', error)
-          // 오류 시 기본 카테고리 생성 시도
-          await createDefaultCategories()
-          return
+          .order('name')
+
+        if (categoriesError) {
+          console.error('카테고리 로드 오류:', categoriesError)
+          throw categoriesError
         }
-        
-        console.log('로드된 카테고리:', data)
-        
-        // 카테고리가 없으면 기본 카테고리 생성
-        if (!data || data.length === 0) {
-          console.log('카테고리가 없어 기본 카테고리를 생성합니다.')
-          await createDefaultCategories()
-          return
+
+        // 아티클 로드
+        const { data: articleData, error: articleError } = await supabase
+          .from('articles')
+          .select(`
+            *,
+            category:categories(
+              id,
+              name,
+              color
+            )
+          `)
+          .eq('id', articleId)
+          .single()
+
+        if (articleError) {
+          console.error('아티클 로드 오류:', articleError)
+          throw articleError
         }
-        
-        setCategories(data)
-      } catch (err) {
-        console.error('카테고리 로드 중 예외:', err)
-        // 오류 시 기본 카테고리 사용
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-      }
-    }
-    
-    // 기본 카테고리 생성 함수
-    const createDefaultCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .insert(CATEGORIES)
-          .select()
-        
-        if (error) {
-          console.error('기본 카테고리 생성 오류:', error)
-          // 생성 실패 시 임시 카테고리 사용
-          setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-          return
+
+        if (!articleData) {
+          throw new Error('아티클을 찾을 수 없습니다.')
         }
+
+        // 상태에 데이터 설정
+        setOriginalArticle(articleData)
+        setTitle(articleData.title || "")
+        setContent(articleData.content || "")
+        setCategory(articleData.category?.name || "")
+        setSeoTitle(articleData.seo_title || "")
+        setSeoDescription(articleData.seo_description || "")
+        setTags(articleData.tags ? articleData.tags.join(', ') : "")
+        setSlug(articleData.slug || "")
+        setAuthor(articleData.author || "pickteum1")
+        setStatus(articleData.status || "published")
+        setThumbnail(articleData.thumbnail)
         
-        console.log('기본 카테고리 생성 완료:', data)
-        setCategories(data)
-        
+        // 발행 날짜/시간 설정
+        if (articleData.published_at) {
+          const publishDateTime = new Date(articleData.published_at)
+          setPublishDate(publishDateTime)
+          setPublishTime(format(publishDateTime, "HH:mm"))
+          setIsPublished(articleData.status === 'published')
+        }
+
+        setCategories(categoriesData || [])
+
         toast({
-          title: "초기 설정 완료",
-          description: "기본 카테고리가 생성되었습니다.",
+          title: "아티클 로드 완료",
+          description: "편집을 시작할 수 있습니다.",
         })
-      } catch (err) {
-        console.error('기본 카테고리 생성 중 예외:', err)
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
+
+      } catch (error) {
+        console.error('데이터 로드 실패:', error)
+        setIsError(true)
+        toast({
+          variant: "destructive",
+          title: "아티클 로드 실패",
+          description: "아티클을 불러오는 중 오류가 발생했습니다.",
+        })
+      } finally {
+        setIsLoading(false)
       }
     }
-    
-    loadCategories()
-  }, [])
+
+    if (articleId) {
+      loadArticleData()
+    }
+  }, [articleId])
 
   // 자동 저장 타이머
   useEffect(() => {
@@ -133,10 +190,39 @@ export default function NewPostPage() {
   }, [title, content, category, status])
 
   // 자동 저장
-  const handleAutoSave = () => {
-    // 실제 구현 시 API 호출로 대체
-    console.log("Auto saving...", { title, content, category, status })
-    setLastSaved(new Date().toLocaleTimeString())
+  const handleAutoSave = async () => {
+    if (!originalArticle) return
+    
+    try {
+      const articleData = {
+        title,
+        content,
+        category_id: categories.find(cat => cat.name === category)?.id || originalArticle.category_id,
+        author,
+        slug: slug || title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
+        status,
+        seo_title: seoTitle || title,
+        seo_description: seoDescription,
+        tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        published_at: originalArticle.published_at || (status === 'published' ? new Date().toISOString() : null),
+        updated_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('articles')
+        .update(articleData)
+        .eq('id', articleId)
+
+      if (error) {
+        console.error('자동 저장 오류:', error)
+        return
+      }
+
+      setLastSaved(new Date().toLocaleTimeString())
+      console.log("Auto saved at:", new Date().toLocaleTimeString())
+    } catch (error) {
+      console.error('자동 저장 중 예외:', error)
+    }
   }
 
   // === 리치 텍스트 에디터 함수들 ===
@@ -152,17 +238,14 @@ export default function NewPostPage() {
     
     let newText: string
     if (selectedText) {
-      // 선택된 텍스트가 있으면 앞뒤로 감싸기
       newText = beforeText + selectedText + afterText
     } else {
-      // 선택된 텍스트가 없으면 기본 텍스트 사용
       newText = beforeText + defaultText + afterText
     }
     
     const newContent = content.substring(0, start) + newText + content.substring(end)
     setContent(newContent)
     
-    // 커서 위치 조정
     setTimeout(() => {
       if (selectedText) {
         textarea.setSelectionRange(start + beforeText.length, start + beforeText.length + selectedText.length)
@@ -173,27 +256,19 @@ export default function NewPostPage() {
     }, 0)
   }
 
-  // 볼드 처리
-  const handleBold = () => {
-    insertText("**", "**", "볼드 텍스트")
-  }
+  // 포맷팅 함수들
+  const handleBold = () => insertText("**", "**", "볼드 텍스트")
+  const handleItalic = () => insertText("*", "*", "이탤릭 텍스트")
+  const handleCode = () => insertText("`", "`", "코드")
 
-  // 이탤릭 처리
-  const handleItalic = () => {
-    insertText("*", "*", "이탤릭 텍스트")
-  }
-
-  // 일반 목록 처리
   const handleList = () => {
     if (!textareaRef.current) return
-    
     const textarea = textareaRef.current
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selectedText = content.substring(start, end)
     
     if (selectedText) {
-      // 선택된 텍스트를 줄별로 나누어 각 줄에 - 추가
       const lines = selectedText.split('\n')
       const newText = lines.map(line => line.trim() ? `- ${line.trim()}` : '').join('\n')
       insertText("", "", newText)
@@ -202,17 +277,14 @@ export default function NewPostPage() {
     }
   }
 
-  // 번호 목록 처리
   const handleOrderedList = () => {
     if (!textareaRef.current) return
-    
     const textarea = textareaRef.current
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selectedText = content.substring(start, end)
     
     if (selectedText) {
-      // 선택된 텍스트를 줄별로 나누어 각 줄에 번호 추가
       const lines = selectedText.split('\n')
       const newText = lines.map((line, index) => 
         line.trim() ? `${index + 1}. ${line.trim()}` : ''
@@ -223,17 +295,14 @@ export default function NewPostPage() {
     }
   }
 
-  // 링크 처리
   const handleLink = () => {
     if (!textareaRef.current) return
-    
     const textarea = textareaRef.current
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selectedText = content.substring(start, end)
     
     if (selectedText) {
-      // 선택된 텍스트를 링크 텍스트로 사용
       const url = prompt("링크 URL을 입력하세요:")
       if (url) {
         insertText("[", `](${url})`, selectedText)
@@ -246,17 +315,14 @@ export default function NewPostPage() {
     }
   }
 
-  // 이미지 처리 (로컬 파일 업로드)
   const handleImage = () => {
     imageInputRef.current?.click()
   }
 
-  // 이미지 파일 업로드 처리
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // 이미지 파일 검증
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
@@ -266,7 +332,6 @@ export default function NewPostPage() {
       return
     }
 
-    // 파일 크기 검증 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -277,7 +342,6 @@ export default function NewPostPage() {
     }
 
     try {
-      // 업로드 시작 토스트
       toast({
         title: "이미지 업로드 중...",
         description: "잠시만 기다려주세요.",
@@ -300,16 +364,10 @@ export default function NewPostPage() {
         return
       }
 
-      // 업로드 성공 시 공개 URL 생성
       const { data: publicUrlData } = bucket.getPublicUrl(filePath)
       const imageUrl = publicUrlData.publicUrl
-      
-      console.log('이미지 업로드 성공:', imageUrl)
-
-      // 대체 텍스트 입력받기
       const altText = prompt("이미지 설명을 입력하세요 (선택사항):") || file.name.split('.')[0]
       
-      // 마크다운 형식으로 이미지 삽입
       insertText("![", `](${imageUrl})`, altText)
 
       toast({
@@ -326,31 +384,8 @@ export default function NewPostPage() {
       })
     }
 
-    // 파일 input 초기화
     if (e.target) {
       e.target.value = ''
-    }
-  }
-
-  // 인라인 코드 처리
-  const handleCode = () => {
-    insertText("`", "`", "코드")
-  }
-
-  // 코드 블록 처리
-  const handleCodeBlock = () => {
-    if (!textareaRef.current) return
-    
-    const textarea = textareaRef.current
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = content.substring(start, end)
-    
-    if (selectedText) {
-      // 선택된 텍스트를 코드 블록으로 감싸기
-      insertText("```\n", "\n```", selectedText)
-    } else {
-      insertText("```\n", "\n```", "코드 블록")
     }
   }
 
@@ -359,7 +394,6 @@ export default function NewPostPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // 이미지 파일 검증
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
@@ -369,7 +403,6 @@ export default function NewPostPage() {
       return
     }
 
-    // 파일 크기 검증 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -381,7 +414,6 @@ export default function NewPostPage() {
 
     setThumbnailFile(file)
 
-    // 이미지 미리보기 생성
     const reader = new FileReader()
     reader.onload = (e) => {
       setThumbnail(e.target?.result as string)
@@ -389,47 +421,15 @@ export default function NewPostPage() {
     reader.readAsDataURL(file)
   }
 
-  // slug 중복 체크 및 고유한 slug 생성 함수
-  const generateUniqueSlug = async (baseSlug: string): Promise<string> => {
-    let finalSlug = baseSlug
-    let counter = 1
+  // 저장 처리 (UPDATE)
+  const handleSave = async (publish = false, forceStatus?: string, scheduledTime?: string) => {
+    if (!originalArticle) return
 
-    while (true) {
-      // 현재 slug가 이미 존재하는지 확인
-      const { data: existingArticle, error } = await supabase
-        .from('articles')
-        .select('id')
-        .eq('slug', finalSlug)
-        .single()
-
-      // 에러가 발생했다면 (데이터가 없다면) 해당 slug 사용 가능
-      if (error && error.code === 'PGRST116') {
-        return finalSlug
-      }
-
-      // 데이터가 존재한다면 숫자를 붙여서 다시 시도
-      if (existingArticle) {
-        finalSlug = `${baseSlug}-${counter}`
-        counter++
-      } else {
-        return finalSlug
-      }
-
-      // 무한 루프 방지 (최대 100번 시도)
-      if (counter > 100) {
-        finalSlug = `${baseSlug}-${Date.now()}`
-        return finalSlug
-      }
-    }
-  }
-
-  // 저장 처리
-  const handleSave = async (publish = false) => {
     setIsSaving(true)
 
     try {
       // 필수 필드 검증
-      if (!title.trim()) {
+      if (!title) {
         toast({
           variant: "destructive",
           title: "제목을 입력해주세요.",
@@ -449,7 +449,7 @@ export default function NewPostPage() {
         return
       }
 
-      if (publish && !content.trim()) {
+      if (publish && !content) {
         toast({
           variant: "destructive",
           title: "내용을 입력해주세요.",
@@ -461,19 +461,15 @@ export default function NewPostPage() {
 
       let thumbnailUrl = thumbnail
 
-      // 썸네일 파일이 있으면 업로드
+      // 새로운 썸네일 파일이 있으면 업로드
       if (thumbnailFile) {
         try {
           const fileExt = thumbnailFile.name.split('.').pop()
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
           const filePath = `thumbnails/${fileName}`
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('article-thumbnails')
-            .upload(filePath, thumbnailFile, {
-              cacheControl: '3600',
-              upsert: false
-            })
+          const bucket = await useStorageBucket('article-thumbnails')
+          const { data: uploadData, error: uploadError } = await bucket.upload(filePath, thumbnailFile)
 
           if (uploadError) {
             console.error('썸네일 업로드 오류:', uploadError)
@@ -486,10 +482,7 @@ export default function NewPostPage() {
             return
           }
 
-          const { data: publicUrlData } = supabase.storage
-            .from('article-thumbnails')
-            .getPublicUrl(filePath)
-          
+          const { data: publicUrlData } = bucket.getPublicUrl(filePath)
           thumbnailUrl = publicUrlData.publicUrl
           console.log('썸네일 업로드 성공:', thumbnailUrl)
         } catch (uploadError) {
@@ -506,98 +499,46 @@ export default function NewPostPage() {
 
       // 카테고리 ID 찾기
       const selectedCategory = categories.find(cat => cat.name === category)
-      const categoryId = selectedCategory?.id
-
-      if (!categoryId) {
-        toast({
-          variant: "destructive",
-          title: "카테고리 오류",
-          description: "선택한 카테고리를 찾을 수 없습니다.",
-        })
-        setIsSaving(false)
-        return
-      }
-
-      // 기본 slug 생성
-      const baseSlug = slug || title.toLowerCase()
-        .replace(/[^a-z0-9가-힣\s]/g, "")  // 특수문자 제거
-        .trim()
-        .replace(/\s+/g, "-")  // 공백을 하이픈으로
-        .replace(/-+/g, "-")   // 연속된 하이픈을 하나로
-        .replace(/^-|-$/g, "") // 앞뒤 하이픈 제거
-
-      // 고유한 slug 생성
-      const uniqueSlug = await generateUniqueSlug(baseSlug)
+      const categoryId = selectedCategory ? selectedCategory.id : originalArticle.category_id
 
       // Article 데이터 준비
       const articleData = {
         title: title.trim(),
         content: content.trim(),
         category_id: categoryId,
-        author: author || 'pickteum1',
-        slug: uniqueSlug,  // 고유한 slug 사용
-        status: publish ? 'published' : 'draft',
+        author: author || originalArticle.author,
+        slug: slug || title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
+        status: forceStatus || (publish ? 'published' : status),
         thumbnail: thumbnailUrl,
         seo_title: seoTitle || title,
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-        published_at: publish ? new Date().toISOString() : null,
-        views: 0  // 초기 조회수 설정
+        published_at: scheduledTime || originalArticle.published_at || (publish ? new Date().toISOString() : null),
+        updated_at: new Date().toISOString()
       }
 
-      console.log('저장할 아티클 데이터:', JSON.stringify(articleData, null, 2))
-      console.log('생성된 고유 slug:', uniqueSlug)
+      console.log('수정할 아티클 데이터:', articleData)
 
-      // Supabase에 아티클 저장
+      // Supabase에서 아티클 업데이트
       const { data, error } = await supabase
         .from('articles')
-        .insert([articleData])
+        .update(articleData)
+        .eq('id', articleId)
         .select()
         .single()
 
       if (error) {
-        // 상세한 에러 로깅
-        console.error('==== Supabase 에러 상세 정보 ====')
-        console.error('전체 에러 객체:', JSON.stringify(error, null, 2))
-        console.error('에러 메시지:', error.message)
-        console.error('에러 코드:', error.code)
-        console.error('에러 세부사항:', error.details)
-        console.error('에러 힌트:', error.hint)
-        console.error('전송된 데이터:', JSON.stringify(articleData, null, 2))
-        console.error('================================')
-        
-        // slug 관련 에러인 경우 특별 처리
-        if (error.code === '23505' && error.message.includes('articles_slug_key')) {
-          toast({
-            variant: "destructive",
-            title: "URL 슬러그 중복",
-            description: "유사한 제목의 글이 이미 존재합니다. 제목을 조금 수정해주세요.",
-          })
-        } else {
-          // 기존 에러 처리 로직
-          let errorMessage = '알 수 없는 오류가 발생했습니다.'
-          
-          if (error.message) {
-            errorMessage = error.message
-          } else if (error.code) {
-            errorMessage = `에러 코드: ${error.code}`
-          }
-
-          toast({
-            variant: "destructive",
-            title: "저장 실패",
-            description: `아티클 저장 중 오류가 발생했습니다: ${errorMessage}`,
-          })
-        }
-        
+        console.error('아티클 수정 오류:', error)
+        toast({
+          variant: "destructive",
+          title: "저장 실패",
+          description: `아티클 수정 중 오류가 발생했습니다: ${error.message}`,
+        })
         setIsSaving(false)
         return
       }
 
-      // 성공 시 slug 상태도 업데이트
-      setSlug(uniqueSlug)
-
-      console.log('아티클 저장 성공:', data)
+      console.log('아티클 수정 성공:', data)
       setLastSaved(new Date().toLocaleTimeString())
 
       if (publish) {
@@ -605,7 +546,7 @@ export default function NewPostPage() {
         setStatus("published")
         toast({
           title: "콘텐츠가 발행되었습니다.",
-          description: `성공적으로 발행되었습니다. (URL: ${uniqueSlug})`,
+          description: "성공적으로 발행되었습니다.",
         })
       } else {
         toast({
@@ -620,10 +561,7 @@ export default function NewPostPage() {
       }
 
     } catch (error) {
-      console.error('==== 저장 중 예외 발생 ====')
-      console.error('예외 객체:', error)
-      console.error('==========================')
-      
+      console.error('저장 중 예외 발생:', error)
       toast({
         variant: "destructive",
         title: "저장 실패",
@@ -634,12 +572,47 @@ export default function NewPostPage() {
     }
   }
 
-  // 예약 발행 처리 (시간대 문제 완전 해결)
-  const handleSchedule = async () => {
-    console.log('🔔 예약 발행 버튼이 클릭되었습니다!')
-    console.log('📅 publishDate:', publishDate)
-    console.log('⏰ publishTime:', publishTime)
+  // 아티클 삭제
+  const handleDelete = async () => {
+    if (!window.confirm("이 아티클을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+      return
+    }
 
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', articleId)
+
+      if (error) {
+        console.error('삭제 오류:', error)
+        toast({
+          variant: "destructive",
+          title: "삭제 실패",
+          description: "아티클 삭제 중 오류가 발생했습니다.",
+        })
+        return
+      }
+
+      toast({
+        title: "삭제 완료",
+        description: "아티클이 삭제되었습니다.",
+      })
+
+      router.push("/admin/posts")
+
+    } catch (error) {
+      console.error('삭제 중 예외:', error)
+      toast({
+        variant: "destructive",
+        title: "삭제 실패",
+        description: "삭제 중 예상치 못한 오류가 발생했습니다.",
+      })
+    }
+  }
+
+  // 예약 발행 처리
+  const handleSchedule = async () => {
     if (!publishDate) {
       toast({
         variant: "destructive",
@@ -656,207 +629,35 @@ export default function NewPostPage() {
       return
     }
 
-    // ✅ 올바른 방법: ISO 문자열에 한국 시간대 명시
-    const dateStr = format(publishDate, "yyyy-MM-dd")
-    const koreaTimeISO = `${dateStr}T${publishTime}:00+09:00` // +09:00은 한국 시간대
-    const scheduledDateTime = new Date(koreaTimeISO)
+    // 예약 날짜와 시간을 결합하여 ISO 문자열 생성
+    const scheduledDateTime = new Date(`${format(publishDate, "yyyy-MM-dd")}T${publishTime}:00`)
     
-    console.log('🇰🇷 한국 시간 입력:', koreaTimeISO)
-    console.log('🌍 UTC 자동 변환:', scheduledDateTime.toISOString())
-    console.log('🕐 현재 UTC 시간:', new Date().toISOString())
-    
-    // 현재 시간과 비교 (둘 다 UTC 기준)
-    const currentUtc = new Date()
-    if (scheduledDateTime <= currentUtc) {
-      console.log('❌ 예약 시간이 현재 시간보다 과거입니다.')
-      
+    // 현재 시간보다 미래인지 확인
+    if (scheduledDateTime <= new Date()) {
       toast({
         variant: "destructive",
         title: "예약 시간이 현재 시간보다 이후여야 합니다.",
-        description: `현재 시간: ${format(new Date(), "MM/dd HH:mm")}`,
       })
       return
     }
 
-    console.log('✅ 시간 검증 통과!')
-    setIsSaving(true)
+    // 기존 handleSave 로직을 사용하되 스케줄 모드로
+    await handleSave(false, 'scheduled', scheduledDateTime.toISOString())
     
-    try {
-      // 필수 필드 검증
-      if (!title.trim()) {
-        toast({
-          variant: "destructive",
-          title: "제목을 입력해주세요.",
-          description: "제목은 필수 입력 항목입니다.",
-        })
-        setIsSaving(false)
-        return
-      }
+    // 성공 시 토스트와 페이지 이동
+    toast({
+      title: "발행이 예약되었습니다.",
+      description: `${format(publishDate, "yyyy-MM-dd")} ${publishTime}에 발행됩니다.`,
+    })
 
-      if (!category) {
-        toast({
-          variant: "destructive",
-          title: "카테고리를 선택해주세요.",
-          description: "카테고리는 필수 선택 항목입니다.",
-        })
-        setIsSaving(false)
-        return
-      }
-
-      console.log('✅ 필수 필드 검증 통과!')
-
-      let thumbnailUrl = thumbnail
-
-      // 썸네일 파일이 있으면 업로드
-      if (thumbnailFile) {
-        console.log('📷 썸네일 업로드 시작...')
-        try {
-          const fileExt = thumbnailFile.name.split('.').pop()
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
-          const filePath = `thumbnails/${fileName}`
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('article-thumbnails')
-            .upload(filePath, thumbnailFile, {
-              cacheControl: '3600',
-              upsert: false
-            })
-
-          if (uploadError) {
-            console.error('❌ 썸네일 업로드 오류:', uploadError)
-            toast({
-              variant: "destructive",
-              title: "썸네일 업로드 실패",
-              description: "썸네일 이미지 업로드 중 오류가 발생했습니다.",
-            })
-            setIsSaving(false)
-            return
-          }
-
-          const { data: publicUrlData } = supabase.storage
-            .from('article-thumbnails')
-            .getPublicUrl(filePath)
-          
-          thumbnailUrl = publicUrlData.publicUrl
-          console.log('✅ 썸네일 업로드 성공:', thumbnailUrl)
-        } catch (uploadError) {
-          console.error('❌ 썸네일 업로드 예외:', uploadError)
-          toast({
-            variant: "destructive",
-            title: "썸네일 업로드 실패",
-            description: "썸네일 이미지 업로드 중 예외가 발생했습니다.",
-          })
-          setIsSaving(false)
-          return
-        }
-      }
-
-      // 카테고리 ID 찾기
-      const selectedCategory = categories.find(cat => cat.name === category)
-      const categoryId = selectedCategory?.id
-
-      if (!categoryId) {
-        console.log('❌ 카테고리 ID를 찾을 수 없습니다.')
-        toast({
-          variant: "destructive",
-          title: "카테고리 오류",
-          description: "선택한 카테고리를 찾을 수 없습니다.",
-        })
-        setIsSaving(false)
-        return
-      }
-
-      console.log('✅ 카테고리 ID 확인:', categoryId)
-
-      // 기본 slug 생성
-      const baseSlug = slug || title.toLowerCase()
-        .replace(/[^a-z0-9가-힣\s]/g, "")
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-
-      console.log('🔗 baseSlug 생성:', baseSlug)
-
-      // 고유한 slug 생성
-      const uniqueSlug = await generateUniqueSlug(baseSlug)
-      console.log('🔗 uniqueSlug 생성:', uniqueSlug)
-
-      // Article 데이터 준비 (예약 발행용)
-      const articleData = {
-        title: title.trim(),
-        content: content.trim(),
-        category_id: categoryId,
-        author: author || 'pickteum1',
-        slug: uniqueSlug,
-        status: 'scheduled',
-        thumbnail: thumbnailUrl,
-        seo_title: seoTitle || title,
-        seo_description: seoDescription || '',
-        tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-        published_at: scheduledDateTime.toISOString(), // 올바른 UTC 시간
-        views: 0
-      }
-
-      console.log('📄 예약 발행 아티클 데이터:', JSON.stringify(articleData, null, 2))
-
-      // Supabase에 아티클 저장
-      console.log('💾 Supabase에 저장 시작...')
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([articleData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ 예약 발행 저장 오류:', error)
-        
-        if (error.code === '23505' && error.message.includes('articles_slug_key')) {
-          toast({
-            variant: "destructive",
-            title: "URL 슬러그 중복",
-            description: "유사한 제목의 글이 이미 존재합니다. 제목을 조금 수정해주세요.",
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "예약 발행 실패",
-            description: `아티클 예약 발행 중 오류가 발생했습니다: ${error.message}`,
-          })
-        }
-        
-        setIsSaving(false)
-        return
-      }
-
-      console.log('✅ 예약 발행 성공:', data)
-
-      // 성공 토스트
-      toast({
-        title: "발행이 예약되었습니다.",
-        description: `한국 시간 ${format(publishDate, "MM/dd")} ${publishTime}에 발행됩니다.`,
-      })
-
-      // 콘텐츠 관리 페이지로 이동
-      console.log('🔄 1.5초 후 콘텐츠 관리 페이지로 이동합니다...')
-      setTimeout(() => {
-        router.push("/admin/posts")
-      }, 1500)
-
-    } catch (error) {
-      console.error('❌ 예약 발행 처리 중 예외 발생:', error)
-      toast({
-        variant: "destructive",
-        title: "예약 발행 실패",
-        description: "예상치 못한 오류가 발생했습니다.",
-      })
-      setIsSaving(false)
-    }
+    setTimeout(() => {
+      router.push("/admin/posts")
+    }, 1500)
   }
 
   // 미리보기
   const handlePreview = () => {
-    // 실제 구현 시 미리보기 페이지로 이동
+    window.open(`/article/${articleId}`, "_blank")
     toast({
       title: "미리보기",
       description: "새 탭에서 미리보기가 열립니다.",
@@ -865,11 +666,7 @@ export default function NewPostPage() {
 
   // 취소
   const handleCancel = () => {
-    if (title || content) {
-      if (window.confirm("작성 중인 내용이 있습니다. 취소하시겠습니까?")) {
-        router.push("/admin/posts")
-      }
-    } else {
+    if (window.confirm("편집을 취소하시겠습니까? 저장하지 않은 변경사항은 사라집니다.")) {
       router.push("/admin/posts")
     }
   }
@@ -881,10 +678,9 @@ export default function NewPostPage() {
     }
   }, [title, seoTitle])
 
-  // 슬러그 자동 생성
+  // 슬러그 자동 생성 (편집 모드에서는 기존 슬러그 유지)
   useEffect(() => {
-    if (!slug && title) {
-      // 한글, 영문, 숫자를 하이픈으로 변환하고 나머지는 제거
+    if (!slug && title && !originalArticle?.slug) {
       const generatedSlug = title
         .toLowerCase()
         .replace(/[^a-z0-9가-힣]/g, "-")
@@ -893,14 +689,43 @@ export default function NewPostPage() {
 
       setSlug(generatedSlug)
     }
-  }, [title, slug])
+  }, [title, slug, originalArticle])
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#FFC83D] mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">아티클 로드 중...</h3>
+          <p className="text-gray-500">잠시만 기다려주세요.</p>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  // 에러 상태
+  if (isError || !originalArticle) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <AlertCircle className="h-12 w-12 text-red-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">아티클을 찾을 수 없습니다</h3>
+          <p className="text-gray-500 mb-4">요청한 아티클이 존재하지 않거나 접근할 수 없습니다.</p>
+          <Button variant="outline" onClick={() => router.push("/admin/posts")}>
+            목록으로 돌아가기
+          </Button>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
       {/* 상단 헤더 */}
       <div className="flex items-center justify-between mb-6 sticky top-0 z-10 pb-4 border-b">
         <div className="flex items-center">
-          <h1 className="text-2xl font-bold mr-4">새 아티클 작성</h1>
+          <h1 className="text-2xl font-bold mr-4">아티클 편집</h1>
           {lastSaved && (
             <div className="flex items-center text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
               <Clock className="h-3 w-3 mr-1" />
@@ -911,6 +736,14 @@ export default function NewPostPage() {
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" onClick={handleCancel}>
             취소
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> 삭제
           </Button>
           <Button variant="outline" size="sm" onClick={handlePreview}>
             <Eye className="mr-2 h-4 w-4" /> 미리보기
@@ -1031,7 +864,7 @@ export default function NewPostPage() {
           </div>
         </div>
 
-        {/* 메타 정보 패널 */}
+        {/* 메타 정보 패널 - 나머지는 새 글 작성과 동일 */}
         <div className="w-full lg:w-80 space-y-6">
           {/* 발행 설정 */}
           <div className="border rounded-lg p-4 bg-white shadow-sm">
@@ -1048,7 +881,6 @@ export default function NewPostPage() {
                     <SelectValue placeholder="상태 선택" />
                   </SelectTrigger>
                   <SelectContent>
-
                     <SelectItem value="published">발행</SelectItem>
                     <SelectItem value="scheduled">예약 발행</SelectItem>
                     <SelectItem value="draft">초안</SelectItem>
@@ -1057,163 +889,47 @@ export default function NewPostPage() {
               </div>
 
               {status === "scheduled" && (
-                <div className="space-y-4 p-4 bg-blue-50/70 border border-blue-200/60 rounded-lg">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <Calendar className="h-4 w-4" />
-                    <Label className="text-sm font-medium">발행 일시 설정</Label>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {/* 날짜 선택 */}
-                    <div className="space-y-2">
-                      <Label className="text-sm text-gray-700">발행 날짜</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full h-10 justify-start text-left font-normal bg-white hover:bg-gray-50 border-gray-200",
-                              !publishDate && "text-muted-foreground",
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-                            <span className="text-sm">
-                              {publishDate ? format(publishDate, "yyyy년 M월 d일", { locale: ko }) : "날짜 선택"}
-                            </span>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={publishDate}
-                            onSelect={setPublishDate}
-                            initialFocus
-                            locale={ko}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* 시간 선택 */}
-                    <div className="space-y-2">
-                      <Label className="text-sm text-gray-700">발행 시간</Label>
-                      <div className="relative">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute left-1 top-1/2 transform -translate-y-1/2 h-8 w-8 hover:bg-gray-100 z-10"
-                            >
-                              <Clock className="h-4 w-4 text-gray-500" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 p-4" align="start">
-                            <div className="space-y-3">
-                              <Label className="text-sm font-medium">시간 선택</Label>
-                              <div className="grid grid-cols-2 gap-3">
-                                {/* 시간 선택 */}
-                                <div className="space-y-2">
-                                  <Label className="text-xs text-gray-600">시</Label>
-                                  <Select 
-                                    value={publishTime.split(':')[0]} 
-                                    onValueChange={(hour) => {
-                                      const minute = publishTime.split(':')[1] || '00'
-                                      setPublishTime(`${hour.padStart(2, '0')}:${minute}`)
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-9">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 24 }, (_, i) => (
-                                        <SelectItem key={i} value={i.toString()}>
-                                          {i.toString().padStart(2, '0')}시
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {/* 분 선택 */}
-                                <div className="space-y-2">
-                                  <Label className="text-xs text-gray-600">분</Label>
-                                  <Select 
-                                    value={publishTime.split(':')[1] || '00'} 
-                                    onValueChange={(minute) => {
-                                      const hour = publishTime.split(':')[0] || '00'
-                                      setPublishTime(`${hour}:${minute.padStart(2, '0')}`)
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-9">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 60 }, (_, i) => (
-                                        <SelectItem key={i} value={i.toString()}>
-                                          {i.toString().padStart(2, '0')}분
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-
-                              {/* 빠른 선택 버튼들 */}
-                              <div className="space-y-2">
-                                <Label className="text-xs text-gray-600">빠른 선택</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {['09:00', '12:00', '15:00', '18:00', '21:00', '00:00'].map((time) => (
-                                    <Button
-                                      key={time}
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 text-xs"
-                                      onClick={() => setPublishTime(time)}
-                                    >
-                                      {time}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                        <Input
-                          type="text"
-                          value={publishTime}
-                          onChange={(e) => setPublishTime(e.target.value)}
-                          placeholder="HH:MM"
-                          className="pl-10 h-10 text-sm bg-white border-gray-200"
+                <div className="space-y-2">
+                  <Label>발행 일시</Label>
+                  <div className="flex gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !publishDate && "text-muted-foreground",
+                          )}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {publishDate ? format(publishDate, "PPP", { locale: ko }) : "날짜 선택"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={publishDate}
+                          onSelect={setPublishDate}
+                          initialFocus
+                          locale={ko}
                         />
-                      </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <Input
+                        type="time"
+                        value={publishTime}
+                        onChange={(e) => setPublishTime(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
-
-                    {/* 예약 정보 미리보기 */}
-                    {publishDate && publishTime && (
-                      <div className="p-3 bg-white border border-blue-100 rounded-md">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">예약 발행 시간:</span>
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-700">
-                              {format(publishDate, "M월 d일", { locale: ko })} {publishTime}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 예약 설정 버튼 */}
-                    <Button 
-                      onClick={handleSchedule}
-                      className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-                      disabled={!publishDate || !publishTime}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      예약 발행 설정
-                    </Button>
                   </div>
+
+                  <Button className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white" onClick={handleSchedule}>
+                    예약 발행 설정
+                  </Button>
                 </div>
               )}
 
@@ -1410,4 +1126,4 @@ export default function NewPostPage() {
       </div>
     </AdminLayout>
   )
-}
+} 

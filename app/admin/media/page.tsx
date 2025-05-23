@@ -47,123 +47,44 @@ import {
   RefreshCw,
   X,
   Info,
+  AlertCircle,
+  Loader2,
 } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import type { DateRange } from "react-day-picker"
+import supabase from "@/lib/supabase"
 
-// 모킹 데이터 - 실제 구현 시 API 호출로 대체
-const MOCK_MEDIA = [
-  {
-    id: "1",
-    name: "healthy-food-spread.png",
-    type: "image/png",
-    size: 1240000,
-    dimensions: "1920x1080",
-    url: "/healthy-food-spread.png",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-10T09:00:00Z",
-    usedIn: ["건강한 식습관으로 면역력 높이는 7가지 방법"],
-  },
-  {
-    id: "2",
-    name: "baseball-stadium.png",
-    type: "image/png",
-    size: 980000,
-    dimensions: "1920x1080",
-    url: "/baseball-stadium.png",
-    uploadedBy: "pickteum2",
-    uploadedAt: "2025-05-09T10:30:00Z",
-    usedIn: ["2025 프로야구 시즌 전망: 주목해야 할 신인 선수들"],
-  },
-  {
-    id: "3",
-    name: "stock-market-chart.png",
-    type: "image/png",
-    size: 850000,
-    dimensions: "1920x1080",
-    url: "/stock-market-chart.png",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-08T08:45:00Z",
-    usedIn: ["글로벌 경제 불확실성 속 투자 전략"],
-  },
-  {
-    id: "4",
-    name: "artificial-intelligence-network.png",
-    type: "image/png",
-    size: 1100000,
-    dimensions: "1920x1080",
-    url: "/artificial-intelligence-network.png",
-    uploadedBy: "pickteum2",
-    uploadedAt: "2025-05-07T11:15:00Z",
-    usedIn: ["최신 인공지능 기술이 바꾸는 일상생활"],
-  },
-  {
-    id: "5",
-    name: "healthy-vegetables.png",
-    type: "image/png",
-    size: 920000,
-    dimensions: "1920x1080",
-    url: "/healthy-vegetables.png",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-06T09:30:00Z",
-    usedIn: ["건강한 식습관으로 면역력 높이는 7가지 방법"],
-  },
-  {
-    id: "6",
-    name: "diverse-fitness.png",
-    type: "image/png",
-    size: 1050000,
-    dimensions: "1920x1080",
-    url: "/diverse-fitness.png",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-05T14:20:00Z",
-    usedIn: ["면역력 높이는 간단한 운동법 5가지"],
-  },
-  {
-    id: "7",
-    name: "sleep-quality-bedroom.png",
-    type: "image/png",
-    size: 890000,
-    dimensions: "1920x1080",
-    url: "/sleep-quality-bedroom.png",
-    uploadedBy: "pickteum2",
-    uploadedAt: "2025-05-04T16:45:00Z",
-    usedIn: ["수면의 질을 높이는 저녁 루틴"],
-  },
-  {
-    id: "8",
-    name: "stress-management-meditation.png",
-    type: "image/png",
-    size: 970000,
-    dimensions: "1920x1080",
-    url: "/stress-management-meditation.png",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-03T10:15:00Z",
-    usedIn: ["스트레스 관리와 면역력의 관계"],
-  },
-  {
-    id: "9",
-    name: "company-profile.pdf",
-    type: "application/pdf",
-    size: 2500000,
-    dimensions: null,
-    url: "/placeholder.svg?key=pdf01",
-    uploadedBy: "pickteum1",
-    uploadedAt: "2025-05-02T09:30:00Z",
-    usedIn: ["회사 소개"],
-  },
-  {
-    id: "10",
-    name: "quarterly-report.xlsx",
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    size: 1800000,
-    dimensions: null,
-    url: "/placeholder.svg?key=xlsx01",
-    uploadedBy: "pickteum2",
-    uploadedAt: "2025-05-01T14:45:00Z",
-    usedIn: ["2025년 1분기 보고서"],
-  },
-]
+// 타입 정의
+interface MediaFile {
+  id: string
+  name: string
+  type: string
+  size: number
+  dimensions?: string
+  url: string
+  path: string
+  uploadedBy: string
+  uploadedAt: string
+  usedIn: string[]
+  metadata?: any
+}
+
+interface FileObject {
+  name: string
+  id: string
+  updated_at: string
+  created_at: string
+  last_accessed_at: string
+  metadata: {
+    eTag: string
+    size: number
+    mimetype: string
+    cacheControl: string
+    lastModified: string
+    contentLength: number
+    httpStatusCode: number
+  }
+}
 
 // 파일 크기 포맷팅 함수
 function formatFileSize(bytes: number): string {
@@ -189,8 +110,45 @@ function getFileIcon(type: string) {
   }
 }
 
+// 이미지 차원 가져오기 함수
+function getImageDimensions(file: File): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) {
+      resolve(null)
+      return
+    }
+    
+    const img = new Image()
+    img.onload = () => {
+      resolve(`${img.width}x${img.height}`)
+    }
+    img.onerror = () => resolve(null)
+    img.src = URL.createObjectURL(file)
+  })
+}
+
+// 아티클에서 사용된 이미지 확인하는 함수
+async function getImageUsage(imageUrl: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('title, thumbnail')
+      .or(`thumbnail.eq.${imageUrl},content.ilike.%${imageUrl}%`)
+    
+    if (error) {
+      console.error('이미지 사용처 조회 오류:', error)
+      return []
+    }
+    
+    return data?.map(article => article.title) || []
+  } catch (error) {
+    console.error('이미지 사용처 조회 예외:', error)
+    return []
+  }
+}
+
 export default function MediaLibraryPage() {
-  const [media, setMedia] = useState(MOCK_MEDIA)
+  const [media, setMedia] = useState<MediaFile[]>([])
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
@@ -198,32 +156,111 @@ export default function MediaLibraryPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [selectedMedia, setSelectedMedia] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showFilters, setShowFilters] = useState(false)
+  const [isError, setIsError] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
+  const [showFilters, setShowFilters] = useState(false)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
-  const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const [selectedFileDetails, setSelectedFileDetails] = useState<(typeof MOCK_MEDIA)[0] | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [selectedFileDetails, setSelectedFileDetails] = useState<MediaFile | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  // 데이터 로딩 시뮬레이션
+  // 미디어 파일 로드
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 800)
-
-    return () => clearTimeout(timer)
+    loadMediaFiles()
   }, [])
+
+  const loadMediaFiles = async () => {
+    try {
+      setIsLoading(true)
+      setIsError(false)
+
+      // Supabase Storage API를 직접 사용
+      const { data: files, error } = await supabase.storage
+        .from('article-thumbnails')
+        .list('', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' }
+        })
+
+      if (error) {
+        console.error('Storage 파일 목록 조회 오류:', error)
+        throw error
+      }
+
+      console.log('Storage 파일 목록:', files)
+
+      // 파일 메타데이터 처리
+      const mediaFiles: MediaFile[] = await Promise.all(
+        files.map(async (file: any) => {
+          try {
+            // 공개 URL 가져오기
+            const { data: urlData } = supabase.storage
+              .from('article-thumbnails')
+              .getPublicUrl(file.name)
+            
+            const publicUrl = urlData.publicUrl
+
+            // 이미지 사용처 확인
+            const usedIn = await getImageUsage(publicUrl)
+
+            // 이미지 차원 설정 (실제로는 메타데이터에서 가져와야 하지만 간단히 처리)
+            let dimensions: string | undefined
+            if (file.metadata?.mimetype?.startsWith('image/')) {
+              dimensions = "알 수 없음"
+            }
+
+            const mediaFile: MediaFile = {
+              id: file.id || file.name,
+              name: file.name,
+              type: file.metadata?.mimetype || 'application/octet-stream',
+              size: file.metadata?.size || 0,
+              dimensions,
+              url: publicUrl,
+              path: file.name,
+              uploadedBy: "시스템", // 실제로는 메타데이터에서 가져와야 함
+              uploadedAt: file.created_at || file.updated_at || new Date().toISOString(),
+              usedIn,
+              metadata: file.metadata
+            }
+
+            return mediaFile
+          } catch (error) {
+            console.error('파일 메타데이터 처리 오류:', error)
+            return null
+          }
+        })
+      )
+
+      // null 값 필터링
+      const validMediaFiles = mediaFiles.filter(file => file !== null) as MediaFile[]
+      
+      setMedia(validMediaFiles)
+      
+      toast({
+        title: "미디어 파일 로드 완료",
+        description: `${validMediaFiles.length}개의 파일을 불러왔습니다.`,
+      })
+
+    } catch (error) {
+      console.error('미디어 파일 로드 실패:', error)
+      setIsError(true)
+      toast({
+        variant: "destructive",
+        title: "미디어 파일 로드 실패",
+        description: "Storage에서 파일 목록을 불러오는 중 오류가 발생했습니다.",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // 필터링된 미디어
   const filteredMedia = media.filter((item) => {
-    // 탭 필터
-    if (activeTab === "images" && !item.type.startsWith("image/")) return false
-    if (activeTab === "documents" && !item.type.includes("pdf") && !item.type.includes("document")) return false
-
     // 검색어 필터
     if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false
@@ -233,8 +270,7 @@ export default function MediaLibraryPage() {
     if (typeFilter && typeFilter !== "all") {
       if (typeFilter === "image" && !item.type.startsWith("image/")) return false
       if (typeFilter === "document" && !item.type.includes("pdf") && !item.type.includes("document")) return false
-      if (typeFilter === "spreadsheet" && !item.type.includes("spreadsheet") && !item.type.includes("excel"))
-        return false
+      if (typeFilter === "spreadsheet" && !item.type.includes("spreadsheet") && !item.type.includes("excel")) return false
     }
 
     // 업로더 필터
@@ -243,15 +279,16 @@ export default function MediaLibraryPage() {
     }
 
     // 날짜 범위 필터
-    if (dateRange?.from && dateRange?.to) {
+    if (dateRange?.from || dateRange?.to) {
       const itemDate = new Date(item.uploadedAt)
-      const fromDate = new Date(dateRange.from)
-      const toDate = new Date(dateRange.to)
-      toDate.setHours(23, 59, 59, 999) // 종료일 끝으로 설정
+      if (dateRange.from && itemDate < dateRange.from) return false
+      if (dateRange.to && itemDate > dateRange.to) return false
+    }
 
-      if (itemDate < fromDate || itemDate > toDate) {
-        return false
-      }
+    // 탭 필터
+    if (activeTab !== "all") {
+      if (activeTab === "images" && !item.type.startsWith("image/")) return false
+      if (activeTab === "documents" && !item.type.includes("pdf") && !item.type.includes("document")) return false
     }
 
     return true
@@ -259,7 +296,7 @@ export default function MediaLibraryPage() {
 
   // 전체 선택 토글
   const toggleSelectAll = () => {
-    if (selectedMedia.length === filteredMedia.length) {
+    if (selectedMedia.length === filteredMedia.length && filteredMedia.length > 0) {
       setSelectedMedia([])
     } else {
       setSelectedMedia(filteredMedia.map((item) => item.id))
@@ -268,23 +305,50 @@ export default function MediaLibraryPage() {
 
   // 개별 선택 토글
   const toggleSelect = (id: string) => {
-    if (selectedMedia.includes(id)) {
-      setSelectedMedia(selectedMedia.filter((mediaId) => mediaId !== id))
-    } else {
-      setSelectedMedia([...selectedMedia, id])
-    }
+    setSelectedMedia((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
   }
 
-  // 선택된 항목 삭제
-  const deleteSelected = () => {
-    if (window.confirm(`선택한 ${selectedMedia.length}개 항목을 삭제하시겠습니까?`)) {
-      // 실제 구현 시 API 호출로 대체
-      setMedia(media.filter((item) => !selectedMedia.includes(item.id)))
+  // 선택된 파일 삭제
+  const deleteSelected = async () => {
+    if (!window.confirm(`선택된 ${selectedMedia.length}개 파일을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+      return
+    }
+
+    try {
+      const filesToDelete = media.filter(file => selectedMedia.includes(file.id))
+      
+      // 파일들 삭제
+      const deletePromises = filesToDelete.map(async (file) => {
+        const { error } = await supabase.storage
+          .from('article-thumbnails')
+          .remove([file.path])
+        
+        if (error) {
+          console.error(`파일 삭제 오류 (${file.name}):`, error)
+          throw error
+        }
+        return file
+      })
+
+      await Promise.all(deletePromises)
+
+      // 로컬 상태 업데이트
+      setMedia(prev => prev.filter(file => !selectedMedia.includes(file.id)))
       setSelectedMedia([])
 
       toast({
         title: "삭제 완료",
-        description: `${selectedMedia.length}개 항목이 삭제되었습니다.`,
+        description: `${filesToDelete.length}개 파일이 삭제되었습니다.`,
+      })
+
+    } catch (error) {
+      console.error('파일 삭제 실패:', error)
+      toast({
+        variant: "destructive",
+        title: "삭제 실패",
+        description: "파일 삭제 중 오류가 발생했습니다.",
       })
     }
   }
@@ -308,12 +372,24 @@ export default function MediaLibraryPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files)
+      
+      // 파일 크기 검증 (10MB 제한)
+      const oversizedFiles = filesArray.filter(file => file.size > 10 * 1024 * 1024)
+      if (oversizedFiles.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "파일 크기 초과",
+          description: `파일 크기는 10MB를 초과할 수 없습니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+        })
+        return
+      }
+
       setUploadFiles(filesArray)
     }
   }
 
-  // 업로드 시작
-  const startUpload = () => {
+  // 실제 업로드 처리
+  const startUpload = async () => {
     if (uploadFiles.length === 0) {
       toast({
         variant: "destructive",
@@ -326,52 +402,136 @@ export default function MediaLibraryPage() {
     setIsUploading(true)
     setUploadProgress(0)
 
-    // 업로드 진행 시뮬레이션
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 300)
+    try {
+      const uploadedFiles: MediaFile[] = []
 
-    // 업로드 완료 시뮬레이션
-    setTimeout(() => {
-      clearInterval(interval)
+      for (let i = 0; i < uploadFiles.length; i++) {
+        const file = uploadFiles[i]
+        
+        // 진행률 업데이트
+        setUploadProgress(Math.round((i / uploadFiles.length) * 90))
+
+        try {
+          // 파일명 생성 (중복 방지)
+          const fileExt = file.name.split('.').pop()
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+          
+          // 파일 업로드
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('article-thumbnails')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          if (uploadError) {
+            console.error(`파일 업로드 오류 (${file.name}):`, uploadError)
+            throw uploadError
+          }
+
+          // 공개 URL 가져오기
+          const { data: urlData } = supabase.storage
+            .from('article-thumbnails')
+            .getPublicUrl(fileName)
+          
+          // 이미지 차원 가져오기
+          const dimensions = await getImageDimensions(file)
+
+          // 새 미디어 파일 객체 생성
+          const newMediaFile: MediaFile = {
+            id: fileName,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            dimensions: dimensions || undefined,
+            url: urlData.publicUrl,
+            path: fileName,
+            uploadedBy: "현재사용자", // 실제로는 인증된 사용자 정보 사용
+            uploadedAt: new Date().toISOString(),
+            usedIn: [],
+            metadata: {
+              originalName: file.name,
+              uploadedAt: new Date().toISOString()
+            }
+          }
+
+          uploadedFiles.push(newMediaFile)
+
+        } catch (error) {
+          console.error(`파일 업로드 실패 (${file.name}):`, error)
+          toast({
+            variant: "destructive",
+            title: `업로드 실패: ${file.name}`,
+            description: "파일 업로드 중 오류가 발생했습니다.",
+          })
+        }
+      }
+
       setUploadProgress(100)
 
-      // 새 파일 추가 (실제 구현 시 API 응답으로 대체)
-      const newMedia = uploadFiles.map((file, index) => ({
-        id: `new-${Date.now()}-${index}`,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        dimensions: file.type.startsWith("image/") ? "1920x1080" : null,
-        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : "/placeholder.svg",
-        uploadedBy: "pickteum1", // 현재 로그인한 사용자
-        uploadedAt: new Date().toISOString(),
-        usedIn: [],
-      }))
-
-      setMedia([...newMedia, ...media])
+      // 로컬 상태 업데이트
+      setMedia(prev => [...uploadedFiles, ...prev])
 
       setTimeout(() => {
         setIsUploading(false)
         setUploadFiles([])
         setShowUploadDialog(false)
+        setUploadProgress(0)
 
         toast({
           title: "업로드 완료",
-          description: `${uploadFiles.length}개 파일이 업로드되었습니다.`,
+          description: `${uploadedFiles.length}개 파일이 업로드되었습니다.`,
         })
       }, 500)
-    }, 3000)
+
+    } catch (error) {
+      console.error('업로드 처리 실패:', error)
+      setIsUploading(false)
+      toast({
+        variant: "destructive",
+        title: "업로드 실패",
+        description: "파일 업로드 중 예상치 못한 오류가 발생했습니다.",
+      })
+    }
+  }
+
+  // 개별 파일 삭제
+  const deleteFile = async (file: MediaFile) => {
+    if (!window.confirm(`"${file.name}"을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.storage
+        .from('article-thumbnails')
+        .remove([file.path])
+
+      if (error) {
+        console.error('파일 삭제 오류:', error)
+        throw error
+      }
+
+      // 로컬 상태 업데이트
+      setMedia(prev => prev.filter(f => f.id !== file.id))
+      setSelectedFileDetails(null)
+
+      toast({
+        title: "삭제 완료",
+        description: "파일이 삭제되었습니다.",
+      })
+
+    } catch (error) {
+      console.error('파일 삭제 실패:', error)
+      toast({
+        variant: "destructive",
+        title: "삭제 실패",
+        description: "파일 삭제 중 오류가 발생했습니다.",
+      })
+    }
   }
 
   // 파일 상세 정보 표시
-  const showFileDetails = (file: (typeof MOCK_MEDIA)[0]) => {
+  const showFileDetails = (file: MediaFile) => {
     setSelectedFileDetails(file)
   }
 
@@ -385,13 +545,26 @@ export default function MediaLibraryPage() {
     })
   }
 
-  // 스켈레톤 로딩 컴포넌트
+  // 파일 다운로드
+  const downloadFile = (file: MediaFile) => {
+    const link = document.createElement('a')
+    link.href = file.url
+    link.download = file.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // 로딩 상태
   if (isLoading) {
     return (
       <AdminLayout>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Skeleton className="h-8 w-40" />
+            <div>
+              <Skeleton className="h-8 w-40 mb-2" />
+              <Skeleton className="h-4 w-60" />
+            </div>
             <Skeleton className="h-10 w-36" />
           </div>
 
@@ -413,6 +586,23 @@ export default function MediaLibraryPage() {
     )
   }
 
+  // 에러 상태
+  if (isError) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <AlertCircle className="h-12 w-12 text-red-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">미디어 파일 로드 실패</h3>
+          <p className="text-gray-500 mb-4">Storage에서 파일 목록을 불러오는 중 오류가 발생했습니다.</p>
+          <Button variant="outline" onClick={loadMediaFiles}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            다시 시도
+          </Button>
+        </div>
+      </AdminLayout>
+    )
+  }
+
   // 타입별 카운트
   const typeCounts = {
     all: media.length,
@@ -425,14 +615,24 @@ export default function MediaLibraryPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">미디어 라이브러리</h1>
-          <p className="text-sm text-gray-500">모든 미디어 파일을 관리하고 업로드할 수 있습니다.</p>
+          <p className="text-sm text-gray-500">Supabase Storage에서 모든 미디어 파일을 관리할 수 있습니다.</p>
         </div>
-        <Button
-          className="bg-[#FFC83D] hover:bg-[#FFB800] shadow-sm transition-all"
-          onClick={() => setShowUploadDialog(true)}
-        >
-          <Upload className="mr-2 h-4 w-4" /> 파일 업로드
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={loadMediaFiles}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+          <Button
+            className="bg-[#FFC83D] hover:bg-[#FFB800] shadow-sm transition-all"
+            onClick={() => setShowUploadDialog(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" /> 파일 업로드
+          </Button>
+        </div>
       </div>
 
       <Card className="mb-6">
@@ -542,8 +742,8 @@ export default function MediaLibraryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">모든 업로더</SelectItem>
-                  <SelectItem value="pickteum1">pickteum1</SelectItem>
-                  <SelectItem value="pickteum2">pickteum2</SelectItem>
+                  <SelectItem value="현재사용자">현재사용자</SelectItem>
+                  <SelectItem value="시스템">시스템</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -567,10 +767,12 @@ export default function MediaLibraryPage() {
         <div className="bg-amber-50 p-3 rounded-md flex flex-wrap items-center mb-4 gap-2 border border-amber-200 shadow-sm">
           <span className="text-sm font-medium text-amber-800 mr-4">{selectedMedia.length}개 항목 선택됨</span>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="h-8 bg-white">
-              <Download className="mr-1 h-4 w-4" /> 다운로드
-            </Button>
-            <Button variant="destructive" size="sm" onClick={deleteSelected} className="h-8">
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={deleteSelected} 
+              className="h-8"
+            >
               <Trash2 className="mr-1 h-4 w-4" /> 삭제
             </Button>
           </div>
@@ -581,10 +783,23 @@ export default function MediaLibraryPage() {
       {filteredMedia.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-md border">
           <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500">검색 결과가 없습니다.</p>
-          <Button variant="link" className="mt-2" onClick={resetFilters}>
-            필터 초기화하기
-          </Button>
+          <p className="text-gray-500">
+            {media.length === 0 ? "업로드된 파일이 없습니다." : "검색 결과가 없습니다."}
+          </p>
+          {media.length === 0 ? (
+            <Button 
+              variant="outline" 
+              className="mt-2"
+              onClick={() => setShowUploadDialog(true)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              첫 번째 파일 업로드하기
+            </Button>
+          ) : (
+            <Button variant="link" className="mt-2" onClick={resetFilters}>
+              필터 초기화하기
+            </Button>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -617,21 +832,13 @@ export default function MediaLibraryPage() {
                     <DropdownMenuItem onClick={() => copyFileUrl(item.url)}>
                       <Copy className="mr-2 h-4 w-4" /> URL 복사
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadFile(item)}>
                       <Download className="mr-2 h-4 w-4" /> 다운로드
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={() => {
-                        if (window.confirm("이 파일을 삭제하시겠습니까?")) {
-                          setMedia(media.filter((file) => file.id !== item.id))
-                          toast({
-                            title: "삭제 완료",
-                            description: "파일이 삭제되었습니다.",
-                          })
-                        }
-                      }}
+                      onClick={() => deleteFile(item)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" /> 삭제
                     </DropdownMenuItem>
@@ -778,21 +985,13 @@ export default function MediaLibraryPage() {
                         <DropdownMenuItem onClick={() => copyFileUrl(item.url)}>
                           <Copy className="mr-2 h-4 w-4" /> URL 복사
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadFile(item)}>
                           <Download className="mr-2 h-4 w-4" /> 다운로드
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600"
-                          onClick={() => {
-                            if (window.confirm("이 파일을 삭제하시겠습니까?")) {
-                              setMedia(media.filter((file) => file.id !== item.id))
-                              toast({
-                                title: "삭제 완료",
-                                description: "파일이 삭제되었습니다.",
-                              })
-                            }
-                          }}
+                          onClick={() => deleteFile(item)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> 삭제
                         </DropdownMenuItem>
@@ -811,7 +1010,9 @@ export default function MediaLibraryPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>파일 업로드</DialogTitle>
-            <DialogDescription>이미지, 문서 등의 파일을 업로드할 수 있습니다.</DialogDescription>
+            <DialogDescription>
+              Supabase Storage에 이미지, 문서 등의 파일을 업로드할 수 있습니다.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -826,7 +1027,14 @@ export default function MediaLibraryPage() {
                     <p className="text-sm text-gray-500">파일을 드래그하거나 클릭하여 업로드</p>
                     <p className="text-xs text-gray-400 mt-1">최대 10MB, JPG, PNG, PDF, DOCX, XLSX 등</p>
                   </div>
-                  <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} />
+                  <input 
+                    ref={fileInputRef} 
+                    type="file" 
+                    multiple 
+                    className="hidden" 
+                    onChange={handleFileUpload}
+                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                  />
                 </div>
 
                 {uploadFiles.length > 0 && (
@@ -836,12 +1044,12 @@ export default function MediaLibraryPage() {
                       {uploadFiles.map((file, index) => (
                         <div key={index} className="flex items-center p-2 text-sm">
                           {file.type.startsWith("image/") ? (
-                            <ImageIcon className="h-5 w-5 text-blue-500 mr-2" />
+                            <ImageIcon className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                           ) : (
-                            <FileText className="h-5 w-5 text-gray-500 mr-2" />
+                            <FileText className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />
                           )}
                           <div className="truncate flex-1">{file.name}</div>
-                          <div className="text-xs text-gray-500 ml-2">{formatFileSize(file.size)}</div>
+                          <div className="text-xs text-gray-500 ml-2 flex-shrink-0">{formatFileSize(file.size)}</div>
                         </div>
                       ))}
                     </div>
@@ -871,12 +1079,18 @@ export default function MediaLibraryPage() {
                 <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
                   취소
                 </Button>
-                <Button onClick={startUpload} className="bg-[#FFC83D] hover:bg-[#FFB800]">
+                <Button 
+                  onClick={startUpload} 
+                  className="bg-[#FFC83D] hover:bg-[#FFB800]"
+                  disabled={uploadFiles.length === 0}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
                   업로드
                 </Button>
               </>
             ) : (
               <Button variant="outline" disabled className="opacity-50 cursor-not-allowed">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 업로드 중...
               </Button>
             )}
@@ -906,7 +1120,9 @@ export default function MediaLibraryPage() {
                 ) : (
                   <div className="w-full h-40 flex flex-col items-center justify-center">
                     {getFileIcon(selectedFileDetails.type)}
-                    <span className="mt-2 text-sm text-gray-500">{selectedFileDetails.name}</span>
+                    <span className="mt-2 text-sm text-gray-500 text-center break-all">
+                      {selectedFileDetails.name}
+                    </span>
                   </div>
                 )}
               </div>
@@ -929,7 +1145,7 @@ export default function MediaLibraryPage() {
 
                 {selectedFileDetails.dimensions && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">크기</h3>
+                    <h3 className="text-sm font-medium text-gray-500">이미지 크기</h3>
                     <p className="text-sm">{selectedFileDetails.dimensions}</p>
                   </div>
                 )}
@@ -947,11 +1163,16 @@ export default function MediaLibraryPage() {
                 </div>
 
                 <div>
+                  <h3 className="text-sm font-medium text-gray-500">Storage 경로</h3>
+                  <p className="text-xs text-gray-400 break-all">{selectedFileDetails.path}</p>
+                </div>
+
+                <div>
                   <h3 className="text-sm font-medium text-gray-500">사용처</h3>
                   {selectedFileDetails.usedIn.length > 0 ? (
-                    <ul className="text-sm list-disc list-inside">
+                    <ul className="text-sm list-disc list-inside space-y-1">
                       {selectedFileDetails.usedIn.map((item, index) => (
-                        <li key={index} className="truncate">
+                        <li key={index} className="truncate" title={item}>
                           {item}
                         </li>
                       ))}
@@ -970,13 +1191,8 @@ export default function MediaLibraryPage() {
                 variant="outline"
                 className="text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => {
-                  if (selectedFileDetails && window.confirm("이 파일을 삭제하시겠습니까?")) {
-                    setMedia(media.filter((file) => file.id !== selectedFileDetails.id))
-                    setSelectedFileDetails(null)
-                    toast({
-                      title: "삭제 완료",
-                      description: "파일이 삭제되었습니다.",
-                    })
+                  if (selectedFileDetails) {
+                    deleteFile(selectedFileDetails)
                   }
                 }}
               >
@@ -994,7 +1210,14 @@ export default function MediaLibraryPage() {
                 >
                   <Copy className="mr-2 h-4 w-4" /> URL 복사
                 </Button>
-                <Button className="bg-[#FFC83D] hover:bg-[#FFB800]">
+                <Button 
+                  className="bg-[#FFC83D] hover:bg-[#FFB800]"
+                  onClick={() => {
+                    if (selectedFileDetails) {
+                      downloadFile(selectedFileDetails)
+                    }
+                  }}
+                >
                   <Download className="mr-2 h-4 w-4" /> 다운로드
                 </Button>
               </div>

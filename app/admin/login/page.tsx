@@ -94,7 +94,7 @@ export default function LoginPage() {
         <Card className="border-none shadow-lg">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-6 transition-all duration-300 hover:scale-105">
-              <Image src="/logo.png" alt="Pickteum Admin" width={160} height={80} priority />
+              <Image src="/logo_vec.png" alt="Pickteum Admin" width={160} height={80} priority />
             </div>
             <CardTitle className="text-2xl font-bold">
               <span className="text-[#212121]">관리자 </span>
@@ -215,22 +215,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter className="border-t p-4">
-            <div className="text-xs text-gray-500 space-y-1 w-full">
-              <p className="text-center font-medium mb-2">테스트 계정 정보</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-100 p-2 rounded text-center">
-                  <p>ID: pickteum1</p>
-                  <p>PW: 1595</p>
-                </div>
-                <div className="bg-gray-100 p-2 rounded text-center">
-                  <p>ID: pickteum2</p>
-                  <p>PW: 1595</p>
-                </div>
-              </div>
-            </div>
-          </CardFooter>
         </Card>
 
         <p className="text-center text-xs text-gray-500 mt-4">

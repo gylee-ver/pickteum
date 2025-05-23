@@ -86,19 +86,19 @@ export default function Footer() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <Link href="/" className="flex items-center">
-              <span className="text-xl font-bold">
-                <span className="text-[#212121]">Pick</span>
-                <span className="text-[#FFC83D]">teum</span>
-              </span>
+              <img
+                src="/logo_vec.png"
+                alt="Pickteum Logo"
+                className="h-6 w-auto inline-block align-middle"
+              />
             </Link>
             <Link href="/admin/login" className="text-sm font-medium text-[#FFC83D] hover:text-[#FFB800]">
               관리자 페이지
             </Link>
           </div>
-          <p className="text-xs text-[#767676] mb-2">(주)픽틈 | 대표: 홍길동 | 사업자등록번호: 123-45-67890</p>
-          <p className="text-xs text-[#767676] mb-2">서울특별시 강남구 테헤란로 123, 픽틈빌딩 8층</p>
-          <p className="text-xs text-[#767676] mb-2">통신판매업 신고번호: 제2025-서울강남-1234호</p>
-          <p className="text-xs text-[#767676]">고객센터: 02-123-4567 (평일 10:00-18:00, 점심시간 12:00-13:00)</p>
+          <p className="text-xs text-[#767676] mb-2">(주)스튜디오시운 | 대표: 이건용 | 사업자등록번호: 506-24-52749</p>
+          <p className="text-xs text-[#767676] mb-2">서울특별시 금천구 범안로 1212, 31층</p>
+          <p className="text-xs text-[#767676] mb-2">통신판매업 신고번호: 2025-서울금천-0961</p>
         </div>
 
         {/* 소셜 미디어 및 정책 링크 */}
