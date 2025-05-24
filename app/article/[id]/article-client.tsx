@@ -108,14 +108,30 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: article.title,
-                    text: article.seo_description || article.content?.substring(0, 100),
-                    url: window.location.href,
+              onClick={async () => {
+                try {
+                  // 단축 URL 생성
+                  const response = await fetch('/api/short', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ articleId: article.id })
                   })
-                } else {
+                  
+                  const { shortUrl } = await response.json()
+                  
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: article.title,
+                      text: article.seo_description || article.content?.substring(0, 100),
+                      url: shortUrl, // 단축 URL 사용
+                    })
+                  } else {
+                    await navigator.clipboard.writeText(shortUrl)
+                    alert('단축 링크가 복사되었습니다!')
+                  }
+                } catch (error) {
+                  console.error('공유 오류:', error)
+                  // 실패시 기존 URL 사용
                   navigator.clipboard.writeText(window.location.href)
                   alert('링크가 복사되었습니다!')
                 }
