@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, Share2 } from "lucide-react"
+import { ArrowLeft, Share2, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ContentCard from "@/components/content-card"
 import Footer from "@/components/footer"
@@ -11,6 +11,7 @@ import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface ArticleClientProps {
   articleId: string
@@ -21,6 +22,10 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   const [article, setArticle] = useState<any>(initialArticle || null)
   const [relatedArticles, setRelatedArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialArticle)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shortUrl, setShortUrl] = useState<string>('')
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   useEffect(() => {
     if (initialArticle) {
@@ -82,6 +87,69 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
     }
   }
 
+  // 공유 버튼 클릭 핸들러
+  const handleShare = async () => {
+    try {
+      setIsGeneratingUrl(true)
+      setShowShareModal(true)
+      
+      // 단축 URL 생성
+      const response = await fetch('/api/short', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: article.id })
+      })
+      
+      if (!response.ok) {
+        throw new Error('단축 URL 생성 실패')
+      }
+      
+      const { shortUrl: generatedUrl } = await response.json()
+      setShortUrl(generatedUrl)
+      
+    } catch (error) {
+      console.error('단축 URL 생성 오류:', error)
+      alert('단축 URL 생성에 실패했습니다. 다시 시도해주세요.')
+      setShowShareModal(false)
+    } finally {
+      setIsGeneratingUrl(false)
+    }
+  }
+
+  // 클립보드 복사 핸들러
+  const handleCopyToClipboard = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shortUrl)
+      } else {
+        // 폴백 방법
+        const textArea = document.createElement('textarea')
+        textArea.value = shortUrl
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+      
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000) // 2초 후 복사 상태 리셋
+      
+    } catch (error) {
+      console.error('클립보드 복사 실패:', error)
+      alert('복사에 실패했습니다. URL을 직접 선택해서 복사해주세요.')
+    }
+  }
+
+  // 모달 닫기
+  const handleCloseModal = () => {
+    setShowShareModal(false)
+    setShortUrl('')
+    setIsCopied(false)
+  }
+
   if (loading) {
     return <LoadingSkeleton />
   }
@@ -108,67 +176,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={async () => {
-                try {
-                  console.log('공유 버튼 클릭됨')
-                  
-                  // 단축 URL 생성
-                  const response = await fetch('/api/short', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ articleId: article.id })
-                  })
-                  
-                  if (!response.ok) {
-                    throw new Error('단축 URL 생성 실패')
-                  }
-                  
-                  const { shortUrl } = await response.json()
-                  console.log('생성된 단축 URL:', shortUrl)
-                  
-                  // 네이티브 공유 시도
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({
-                        title: article.title,
-                        text: article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 100),
-                        url: shortUrl,
-                      })
-                      console.log('네이티브 공유 성공')
-                      return // 공유 성공시에만 종료
-                    } catch (shareError: any) {
-                      console.log('네이티브 공유 에러:', shareError.name, shareError.message)
-                      
-                      // AbortError(사용자 취소)인 경우에도 클립보드 복사 제안
-                      if (shareError.name === 'AbortError') {
-                        const userWantsCopy = confirm('공유가 취소되었습니다. 링크를 클립보드에 복사하시겠습니까?')
-                        if (!userWantsCopy) {
-                          return // 사용자가 복사도 원하지 않으면 종료
-                        }
-                      }
-                      // 다른 에러의 경우 자동으로 클립보드 복사로 넘어감
-                    }
-                  }
-                  
-                  // 클립보드 복사 시도
-                  console.log('클립보드 복사 시도')
-                  await copyToClipboard(shortUrl)
-                  alert('단축 링크가 클립보드에 복사되었습니다!')
-                  
-                } catch (error) {
-                  console.error('전체 공유 프로세스 오류:', error)
-                  
-                  // 최후의 수단: 기존 URL 복사
-                  try {
-                    await copyToClipboard(window.location.href)
-                    alert('링크가 클립보드에 복사되었습니다!')
-                  } catch (clipboardError) {
-                    console.error('클립보드 복사 실패:', clipboardError)
-                    // 클립보드도 실패하면 URL을 직접 보여줌
-                    showUrlToUser(window.location.href)
-                  }
-                }
-              }}
+              onClick={handleShare}
             >
               <Share2 size={20} />
               <span className="sr-only">공유하기</span>
@@ -246,6 +254,79 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
 
         <Footer />
       </div>
+
+      {/* 공유 모달 */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="w-full max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">링크 공유</DialogTitle>
+            <DialogDescription>
+              아래 단축 링크를 복사해서 공유하세요
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* 단축 URL 표시 영역 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">단축 링크</label>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 p-3 bg-gray-50 border rounded-lg">
+                  {isGeneratingUrl ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-[#FFC83D] border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm text-gray-500">단축 링크 생성 중...</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-mono break-all">
+                      {shortUrl || '링크를 생성하고 있습니다...'}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleCopyToClipboard}
+                  disabled={isGeneratingUrl || !shortUrl}
+                  className="bg-[#FFC83D] hover:bg-[#FFB800] text-black"
+                >
+                  {isCopied ? (
+                    <>
+                      <Check size={16} className="mr-1" />
+                      복사됨
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} className="mr-1" />
+                      복사
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* 원본 링크 (참고용) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-500">원본 링크 (참고)</label>
+              <div className="p-2 bg-gray-50 border rounded-lg">
+                <span className="text-xs text-gray-600 break-all">
+                  {window.location.href}
+                </span>
+              </div>
+            </div>
+
+            {/* 안내 메시지 */}
+            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+              💡 단축 링크는 원본 페이지와 동일하게 작동하며, 더 간편하게 공유할 수 있습니다.
+            </div>
+          </div>
+
+          {/* 모달 하단 버튼 */}
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={handleCloseModal}>
+              닫기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
