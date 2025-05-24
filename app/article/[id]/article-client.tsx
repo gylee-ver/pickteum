@@ -110,6 +110,8 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
               size="icon"
               onClick={async () => {
                 try {
+                  console.log('공유 버튼 클릭됨')
+                  
                   // 단축 URL 생성
                   const response = await fetch('/api/short', {
                     method: 'POST',
@@ -117,23 +119,54 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
                     body: JSON.stringify({ articleId: article.id })
                   })
                   
-                  const { shortUrl } = await response.json()
-                  
-                  if (navigator.share) {
-                    await navigator.share({
-                      title: article.title,
-                      text: article.seo_description || article.content?.substring(0, 100),
-                      url: shortUrl, // 단축 URL 사용
-                    })
-                  } else {
-                    await navigator.clipboard.writeText(shortUrl)
-                    alert('단축 링크가 복사되었습니다!')
+                  if (!response.ok) {
+                    throw new Error('단축 URL 생성 실패')
                   }
+                  
+                  const { shortUrl } = await response.json()
+                  console.log('생성된 단축 URL:', shortUrl)
+                  
+                  // 네이티브 공유 시도
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: article.title,
+                        text: article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 100),
+                        url: shortUrl,
+                      })
+                      console.log('네이티브 공유 성공')
+                      return // 공유 성공시에만 종료
+                    } catch (shareError: any) {
+                      console.log('네이티브 공유 에러:', shareError.name, shareError.message)
+                      
+                      // AbortError(사용자 취소)인 경우에도 클립보드 복사 제안
+                      if (shareError.name === 'AbortError') {
+                        const userWantsCopy = confirm('공유가 취소되었습니다. 링크를 클립보드에 복사하시겠습니까?')
+                        if (!userWantsCopy) {
+                          return // 사용자가 복사도 원하지 않으면 종료
+                        }
+                      }
+                      // 다른 에러의 경우 자동으로 클립보드 복사로 넘어감
+                    }
+                  }
+                  
+                  // 클립보드 복사 시도
+                  console.log('클립보드 복사 시도')
+                  await copyToClipboard(shortUrl)
+                  alert('단축 링크가 클립보드에 복사되었습니다!')
+                  
                 } catch (error) {
-                  console.error('공유 오류:', error)
-                  // 실패시 기존 URL 사용
-                  navigator.clipboard.writeText(window.location.href)
-                  alert('링크가 복사되었습니다!')
+                  console.error('전체 공유 프로세스 오류:', error)
+                  
+                  // 최후의 수단: 기존 URL 복사
+                  try {
+                    await copyToClipboard(window.location.href)
+                    alert('링크가 클립보드에 복사되었습니다!')
+                  } catch (clipboardError) {
+                    console.error('클립보드 복사 실패:', clipboardError)
+                    // 클립보드도 실패하면 URL을 직접 보여줌
+                    showUrlToUser(window.location.href)
+                  }
                 }
               }}
             >
@@ -275,4 +308,60 @@ function ErrorState() {
       </div>
     </div>
   )
+}
+
+// 안전한 클립보드 복사 함수
+async function copyToClipboard(text: string): Promise<void> {
+  console.log('클립보드 복사 시도:', text)
+  
+  // 방법 1: 최신 Clipboard API
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text)
+      console.log('Clipboard API로 복사 성공')
+      return
+    } catch (err) {
+      console.warn('Clipboard API 실패:', err)
+    }
+  }
+  
+  // 방법 2: 레거시 방식
+  try {
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    textArea.style.top = '-999999px'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    
+    textArea.focus()
+    textArea.select()
+    textArea.setSelectionRange(0, 99999) // 모바일 지원
+    
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textArea)
+    
+    if (successful) {
+      console.log('레거시 방식으로 복사 성공')
+      return
+    } else {
+      throw new Error('execCommand 실패')
+    }
+  } catch (err) {
+    console.error('레거시 복사 방식 실패:', err)
+    throw err
+  }
+}
+
+// URL을 사용자에게 직접 보여주는 함수
+function showUrlToUser(url: string): void {
+  const message = `링크를 자동으로 복사할 수 없습니다.\n아래 URL을 수동으로 복사해주세요:\n\n${url}`
+  
+  // 모바일에서도 잘 보이도록 prompt 사용
+  if (window.prompt) {
+    window.prompt('링크를 복사하세요:', url)
+  } else {
+    alert(message)
+  }
 } 
