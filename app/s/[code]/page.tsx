@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
 
 // 메타데이터 생성
@@ -88,15 +89,38 @@ export async function generateMetadata({ params }: { params: { code: string } })
   }
 }
 
+// 크롤러 감지 함수
+function isCrawler(userAgent: string): boolean {
+  const crawlerRegex = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|discordbot|slackbot|whatsapp|telegram|kakao|naver|google|bing/i
+  return crawlerRegex.test(userAgent)
+}
+
 // 단축 URL 페이지 컴포넌트
 export default async function ShortCodePage({ params }: { params: { code: string } }) {
   try {
     const { code } = params
+    const headersList = headers()
+    const userAgent = headersList.get('user-agent') || ''
+    
+    console.log('단축 URL 접근:', code, 'User-Agent:', userAgent.substring(0, 100))
     
     // short_code로 아티클 찾기
     const { data: article, error } = await supabase
       .from('articles')
-      .select('id, title, status, views')
+      .select(`
+        id,
+        title,
+        content,
+        thumbnail,
+        seo_title,
+        seo_description,
+        author,
+        status,
+        views,
+        category:categories(
+          name
+        )
+      `)
       .eq('short_code', code)
       .eq('status', 'published')
       .single()
@@ -107,50 +131,57 @@ export default async function ShortCodePage({ params }: { params: { code: string
     }
 
     // 조회수 증가 (백그라운드에서 실행)
-    supabase
-      .from('articles')
-      .update({ views: (article.views || 0) + 1 })
-      .eq('id', article.id)
-      .then(() => {
-        console.log(`아티클 ${article.id} 조회수 증가 (단축 URL을 통해)`)
-      })
-      .catch((updateError) => {
-        console.error('조회수 업데이트 오류:', updateError)
-      })
+    if (!isCrawler(userAgent)) {
+      supabase
+        .from('articles')
+        .update({ views: (article.views || 0) + 1 })
+        .eq('id', article.id)
+        .then(() => {
+          console.log(`아티클 ${article.id} 조회수 증가 (단축 URL)`)
+        })
+        .catch((updateError) => {
+          console.error('조회수 업데이트 오류:', updateError)
+        })
+    }
 
-    // 클라이언트에서 리다이렉트하는 페이지 렌더링
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="mb-4">
-            <div className="w-8 h-8 border-4 border-[#FFC83D] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          </div>
-          <h1 className="text-xl font-bold mb-2">{article.title}</h1>
-          <p className="text-gray-500 mb-4">페이지로 이동 중...</p>
-          <p className="text-sm text-gray-400">
-            자동으로 이동하지 않으면{' '}
-            <a 
-              href={`/article/${article.id}`} 
-              className="text-[#FFC83D] hover:underline"
-            >
-              여기를 클릭
-            </a>
-            하세요
-          </p>
-        </div>
-        
-        {/* 클라이언트에서 리다이렉트 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              setTimeout(function() {
-                window.location.href = '/article/${article.id}';
-              }, 1000);
-            `
-          }}
-        />
-      </div>
-    )
+    // 크롤러인지 확인
+    if (isCrawler(userAgent)) {
+      console.log('크롤러 감지 - 메타데이터 페이지 표시')
+      
+      // 크롤러를 위한 정적 콘텐츠 반환
+      return (
+        <html>
+          <head>
+            <title>{article.seo_title || article.title} | 픽틈</title>
+            <meta name="description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
+            <meta property="og:title" content={article.seo_title || article.title} />
+            <meta property="og:description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
+            <meta property="og:image" content={article.thumbnail || '/pickteum_og.png'} />
+            <meta property="og:type" content="article" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={article.seo_title || article.title} />
+            <meta name="twitter:description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
+            <meta name="twitter:image" content={article.thumbnail || '/pickteum_og.png'} />
+            <link rel="canonical" href={`/article/${article.id}`} />
+          </head>
+          <body>
+            <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
+              <h1>{article.title}</h1>
+              <p style={{ color: '#666' }}>{article.category?.name || '미분류'} · {article.author}</p>
+              <p style={{ marginTop: '20px' }}>
+                <a href={`/article/${article.id}`} style={{ color: '#FFC83D', textDecoration: 'none' }}>
+                  전체 글 보기 →
+                </a>
+              </p>
+            </div>
+          </body>
+        </html>
+      )
+    }
+
+    // 일반 사용자는 즉시 리다이렉트
+    console.log('일반 사용자 - 즉시 리다이렉트')
+    redirect(`/article/${article.id}`)
     
   } catch (error) {
     console.error('단축 URL 처리 오류:', error)
