@@ -59,9 +59,37 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
     
     // 절대 URL로 이미지 경로 생성
-    const imageUrl = article.thumbnail 
-      ? (article.thumbnail.startsWith('http') ? article.thumbnail : `https://pickteum.com${article.thumbnail}`)
-      : 'https://pickteum.com/pickteum_og.png'
+    const extractImageFromContent = (content: string): string | null => {
+      try {
+        const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i)
+        return imgMatch ? imgMatch[1] : null
+      } catch {
+        return null
+      }
+    }
+
+    // 이미지 URL 결정 로직 개선
+    const imageUrl = (() => {
+      // 1. 썸네일이 있으면 사용
+      if (article.thumbnail) {
+        return article.thumbnail.startsWith('http') 
+          ? article.thumbnail 
+          : `https://pickteum.com${article.thumbnail}`
+      }
+      
+      // 2. 콘텐츠에서 첫 번째 이미지 추출
+      const contentImage = extractImageFromContent(article.content || '')
+      if (contentImage) {
+        return contentImage.startsWith('http') 
+          ? contentImage 
+          : `https://pickteum.com${contentImage}`
+      }
+      
+      // 3. 기본 이미지 사용
+      return 'https://pickteum.com/pickteum_og.png'
+    })()
+
+    console.log('생성된 OG 이미지 URL:', imageUrl) // 디버깅용 로그 추가
 
     return {
       title: `${title} | 픽틈`,

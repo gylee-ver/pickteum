@@ -45,9 +45,31 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const title = article.seo_title || article.title
     const description = article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
-    const imageUrl = article.thumbnail 
-      ? (article.thumbnail.startsWith('http') ? article.thumbnail : `https://pickteum.com${article.thumbnail}`)
-      : 'https://pickteum.com/pickteum_og.png'
+    const extractImageFromContent = (content: string): string | null => {
+      try {
+        const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i)
+        return imgMatch ? imgMatch[1] : null
+      } catch {
+        return null
+      }
+    }
+
+    const imageUrl = (() => {
+      if (article.thumbnail) {
+        return article.thumbnail.startsWith('http') 
+          ? article.thumbnail 
+          : `https://pickteum.com${article.thumbnail}`
+      }
+      
+      const contentImage = extractImageFromContent(article.content || '')
+      if (contentImage) {
+        return contentImage.startsWith('http') 
+          ? contentImage 
+          : `https://pickteum.com${contentImage}`
+      }
+      
+      return 'https://pickteum.com/pickteum_og.png'
+    })()
 
     return {
       title: `${title} | 픽틈`,
