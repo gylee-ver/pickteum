@@ -180,88 +180,50 @@ function getDefaultMetadata(): Metadata {
 
 // 페이지 컴포넌트
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
-  try {
-    const { code } = await params
-    
-    console.log('숏 URL 페이지 접근:', {
-      code,
-      length: code?.length,
-      type: typeof code
-    })
-    
-    // 코드 유효성 검사
-    if (!code || typeof code !== 'string' || code.length !== 6) {
-      console.log('숏 URL: 잘못된 코드 형식')
-      notFound()
-    }
-    
-    // 아티클 조회
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select('id, title, views, short_code')
-      .eq('short_code', code)
-      .eq('status', 'published')
-      .single()
-    
-    console.log('숏 URL 페이지 DB 쿼리 결과:', {
-      found: !!article,
-      error: error?.message,
-      errorCode: error?.code,
-      articleId: article?.id,
-      shortCode: article?.short_code
-    })
-    
-    if (error || !article) {
-      console.log('숏 URL: 아티클을 찾을 수 없음')
-      notFound()
-    }
-    
-    console.log('숏 URL: 아티클 발견, 리다이렉트 중:', `/article/${article.id}`)
-    
-    // ✅ 수정된 조회수 증가 로직 (올바른 Promise 처리)
-    supabase
-      .from('articles')
-      .update({ views: (article.views || 0) + 1 })
-      .eq('id', article.id)
-      .then(({ error }) => {
-        if (error) {
-          console.log('조회수 증가 실패 (무시):', error.message)
-        } else {
-          console.log('조회수 증가 성공')
-        }
-      })
-    
-    // 리다이렉트
-    redirect(`/article/${article.id}`)
-
-  } catch (error) {
-    // NEXT_REDIRECT 오류는 정상적인 리다이렉트이므로 무시
-    if (error && typeof error === 'object' && 'digest' in error && 
-        typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
-      console.log('숏 URL 정상 리다이렉트')
-      // 리다이렉트는 정상 동작이므로 아무것도 하지 않음
-      return
-    }
-    
-    console.error('숏 URL 페이지 실제 오류:', error)
+  const { code } = await params
+  
+  console.log('숏 URL 페이지 접근:', { code, length: code?.length, type: typeof code })
+  
+  if (!code || typeof code !== 'string' || code.length !== 6) {
+    console.log('숏 URL: 잘못된 코드 형식')
     notFound()
   }
   
-  // try-catch 밖에서 redirect 실행
-  const { code } = await params
+  const { data: article, error } = await supabase
+    .from('articles')
+    .select('id, views')
+    .eq('short_code', code)
+    .eq('status', 'published')
+    .single()
   
-  if (code && typeof code === 'string' && code.length === 6) {
-    const { data: article } = await supabase
-      .from('articles')
-      .select('id')
-      .eq('short_code', code)
-      .eq('status', 'published')
-      .single()
-    
-    if (article) {
-      redirect(`/article/${article.id}`)
-    }
+  console.log('숏 URL 페이지 DB 쿼리 결과:', {
+    found: !!article,
+    error: error?.message,
+    errorCode: error?.code,
+    articleId: article?.id,
+    shortCode: code
+  })
+  
+  if (error || !article) {
+    console.log('숏 URL: 아티클을 찾을 수 없음')
+    notFound()
   }
   
-  notFound()
+  console.log('숏 URL: 아티클 발견, 리다이렉트 중:', `/article/${article.id}`)
+  
+  // 조회수 증가 (백그라운드)
+  supabase
+    .from('articles')
+    .update({ views: (article.views || 0) + 1 })
+    .eq('id', article.id)
+    .then(({ error }) => {
+      if (error) {
+        console.log('조회수 증가 실패:', error.message)
+      } else {
+        console.log('조회수 증가 성공')
+      }
+    })
+  
+  // 🚀 여기서 바로 redirect 호출!
+  redirect(`/article/${article.id}`)
 } 
