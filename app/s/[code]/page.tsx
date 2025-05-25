@@ -1,12 +1,16 @@
 import { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
+
+// 동적 라우트 강제 설정
+export const dynamic = 'force-dynamic'
 
 // 메타데이터 생성
 export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
   try {
     const { code } = params
+    console.log('generateMetadata 호출됨, code:', code)
     
     // short_code로 아티클 찾기
     const { data: article, error } = await supabase
@@ -34,6 +38,8 @@ export async function generateMetadata({ params }: { params: { code: string } })
       .eq('short_code', code)
       .eq('status', 'published')
       .single()
+    
+    console.log('generateMetadata DB 결과:', { article: !!article, error })
     
     if (error || !article) {
       return {
@@ -89,20 +95,39 @@ export async function generateMetadata({ params }: { params: { code: string } })
   }
 }
 
-// 크롤러 감지 함수
+// 크롤러 감지 함수 (카카오톡 User-Agent 개선)
 function isCrawler(userAgent: string): boolean {
-  const crawlerRegex = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|discordbot|slackbot|whatsapp|telegram|kakao|naver|google|bing/i
+  const crawlerRegex = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|discordbot|slackbot|whatsapp|telegram|kakaotalk|kakao|naver|google|bing|preview/i
   return crawlerRegex.test(userAgent)
 }
 
-// 단축 URL 페이지 컴포넌트
+// 카카오톡 인앱브라우저인지 확인
+function isKakaoInApp(userAgent: string): boolean {
+  return /kakaotalk/i.test(userAgent)
+}
+
 export default async function ShortCodePage({ params }: { params: { code: string } }) {
   try {
     const { code } = params
+    console.log('ShortCodePage 호출됨, code:', code)
+    
+    // 코드 유효성 검사
+    if (!code || code.length !== 6) {
+      console.log('잘못된 단축 코드 형식:', code)
+      notFound()
+    }
+    
     const headersList = headers()
     const userAgent = headersList.get('user-agent') || ''
+    const referer = headersList.get('referer') || ''
     
-    console.log('단축 URL 접근:', code, 'User-Agent:', userAgent.substring(0, 100))
+    console.log('접근 정보:', {
+      code,
+      userAgent: userAgent.substring(0, 150),
+      referer,
+      isKakao: isKakaoInApp(userAgent),
+      isCrawlerDetected: isCrawler(userAgent)
+    })
     
     // short_code로 아티클 찾기
     const { data: article, error } = await supabase
@@ -117,6 +142,7 @@ export default async function ShortCodePage({ params }: { params: { code: string
         author,
         status,
         views,
+        short_code,
         category:categories(
           name
         )
@@ -125,30 +151,53 @@ export default async function ShortCodePage({ params }: { params: { code: string
       .eq('status', 'published')
       .single()
     
+    console.log('DB 조회 결과:', {
+      found: !!article,
+      error: error?.message,
+      articleId: article?.id,
+      shortCode: article?.short_code
+    })
+    
     if (error || !article) {
-      console.log('단축 URL을 찾을 수 없음:', code, error)
-      redirect('/404')
+      console.log('단축 URL을 찾을 수 없음:', { code, error })
+      
+      // 모든 단축 코드 확인 (디버깅용)
+      const { data: allCodes } = await supabase
+        .from('articles')
+        .select('short_code, title')
+        .not('short_code', 'is', null)
+        .limit(10)
+      
+      console.log('현재 존재하는 단축 코드들:', allCodes)
+      notFound()
     }
 
-    // 조회수 증가 (백그라운드에서 실행)
+    // 조회수 증가 (실제 사용자 접근 시에만)
     if (!isCrawler(userAgent)) {
+      console.log('조회수 증가 시도')
       supabase
         .from('articles')
         .update({ views: (article.views || 0) + 1 })
         .eq('id', article.id)
-        .then(() => {
-          console.log(`아티클 ${article.id} 조회수 증가 (단축 URL)`)
-        })
-        .catch((updateError) => {
-          console.error('조회수 업데이트 오류:', updateError)
+        .then(({ error: updateError }) => {
+          if (updateError) {
+            console.error('조회수 업데이트 오류:', updateError)
+          } else {
+            console.log(`아티클 ${article.id} 조회수 증가`)
+          }
         })
     }
 
-    // 크롤러인지 확인
+    // 카카오톡 인앱브라우저는 특별 처리
+    if (isKakaoInApp(userAgent)) {
+      console.log('카카오톡 인앱브라우저 감지 - 즉시 리다이렉트')
+      redirect(`/article/${article.id}`)
+    }
+
+    // 일반 크롤러는 메타데이터 페이지 표시
     if (isCrawler(userAgent)) {
       console.log('크롤러 감지 - 메타데이터 페이지 표시')
       
-      // 크롤러를 위한 정적 콘텐츠 반환
       return (
         <html>
           <head>
@@ -158,11 +207,13 @@ export default async function ShortCodePage({ params }: { params: { code: string
             <meta property="og:description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
             <meta property="og:image" content={article.thumbnail || '/pickteum_og.png'} />
             <meta property="og:type" content="article" />
+            <meta property="og:url" content={`/s/${code}`} />
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:title" content={article.seo_title || article.title} />
             <meta name="twitter:description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
             <meta name="twitter:image" content={article.thumbnail || '/pickteum_og.png'} />
             <link rel="canonical" href={`/article/${article.id}`} />
+            <meta httpEquiv="refresh" content={`3;url=/article/${article.id}`} />
           </head>
           <body>
             <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
@@ -173,6 +224,9 @@ export default async function ShortCodePage({ params }: { params: { code: string
                   전체 글 보기 →
                 </a>
               </p>
+              <script dangerouslySetInnerHTML={{
+                __html: `setTimeout(function(){window.location.href='/article/${article.id}';}, 1000);`
+              }} />
             </div>
           </body>
         </html>
@@ -184,7 +238,7 @@ export default async function ShortCodePage({ params }: { params: { code: string
     redirect(`/article/${article.id}`)
     
   } catch (error) {
-    console.error('단축 URL 처리 오류:', error)
-    redirect('/404')
+    console.error('단축 URL 처리 중 예외 발생:', error)
+    notFound()
   }
 } 
