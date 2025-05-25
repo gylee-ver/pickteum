@@ -14,7 +14,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     let { data: article, error } = await supabase
       .from('articles')
       .select(`
-        *,
+        id,
+        title,
+        content,
+        thumbnail,
+        seo_title,
+        seo_description,
+        author,
+        tags,
+        slug,
+        published_at,
+        created_at,
+        updated_at,
+        status,
+        views,
+        category_id,
         category:categories(
           id,
           name,
@@ -30,7 +44,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       const { data: articleById, error: errorById } = await supabase
         .from('articles')
         .select(`
-          *,
+          id,
+          title,
+          content,
+          thumbnail,
+          seo_title,
+          seo_description,
+          author,
+          tags,
+          slug,
+          published_at,
+          created_at,
+          updated_at,
+          status,
+          views,
+          category_id,
           category:categories(
             id,
             name,
@@ -45,7 +73,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       error = errorById
     }
 
-    console.log('아티클 generateMetadata DB 결과:', { found: !!article, error: error?.message })
+    console.log('아티클 generateMetadata DB 결과:', { 
+      found: !!article, 
+      error: error?.message,
+      thumbnail: article?.thumbnail,
+      title: article?.title 
+    })
 
     if (error || !article) {
       return {
@@ -154,7 +187,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     let { data: article, error } = await supabase
       .from('articles')
       .select(`
-        *,
+        id,
+        title,
+        content,
+        thumbnail,
+        seo_title,
+        seo_description,
+        author,
+        tags,
+        slug,
+        published_at,
+        created_at,
+        updated_at,
+        status,
+        views,
+        category_id,
         category:categories(
           id,
           name,
@@ -169,7 +216,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       const { data: articleById, error: errorById } = await supabase
         .from('articles')
         .select(`
-          *,
+          id,
+          title,
+          content,
+          thumbnail,
+          seo_title,
+          seo_description,
+          author,
+          tags,
+          slug,
+          published_at,
+          created_at,
+          updated_at,
+          status,
+          views,
+          category_id,
           category:categories(
             id,
             name,

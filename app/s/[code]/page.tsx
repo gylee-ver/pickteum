@@ -71,6 +71,13 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       return 'https://pickteum.com/pickteum_og.png'
     })()
 
+    console.log('썸네일 처리:', {
+      originalThumbnail: article.thumbnail,
+      hasThumbnail: !!article.thumbnail,
+      thumbnailType: typeof article.thumbnail,
+      finalImageUrl: imageUrl
+    })
+
     return {
       title: `${title} | 픽틈`,
       description,
@@ -130,7 +137,13 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   // 아티클 조회
   const { data: article, error } = await supabase
     .from('articles')
-    .select('id, title, status, views')
+    .select(`
+      id, 
+      title, 
+      thumbnail,
+      status, 
+      views
+    `)
     .eq('short_code', code)
     .eq('status', 'published')
     .single()
