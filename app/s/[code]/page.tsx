@@ -6,9 +6,10 @@ import supabase from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// 메타데이터 생성
-export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
-  console.log('🔍 generateMetadata 시작, code:', params.code)
+// 메타데이터 생성 - params await 추가
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params
+  console.log('🔍 generateMetadata 시작, code:', code)
   
   try {
     const { data: article, error } = await supabase
@@ -28,14 +29,14 @@ export async function generateMetadata({ params }: { params: { code: string } })
         status,
         category:categories(name, color)
       `)
-      .eq('short_code', params.code)
+      .eq('short_code', code)
       .eq('status', 'published')
       .single()
     
     console.log('📊 generateMetadata DB 결과:', { 
       found: !!article, 
       error: error?.message,
-      code: params.code 
+      code 
     })
     
     if (error || !article) {
@@ -92,13 +93,15 @@ export async function generateMetadata({ params }: { params: { code: string } })
   }
 }
 
-export default async function ShortCodePage({ params }: { params: { code: string } }) {
-  console.log('🚀 ShortCodePage 시작, code:', params.code)
+// 매우 간단한 테스트 버전
+export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params // await 추가
+  console.log('🚀 ShortCodePage 시작, code:', code)
   
   try {
     // 코드 유효성 검사
-    if (!params.code || params.code.length !== 6) {
-      console.log('❌ 잘못된 코드 형식:', params.code)
+    if (!code || code.length !== 6) {
+      console.log('❌ 잘못된 코드 형식:', code)
       notFound()
     }
     
@@ -106,7 +109,7 @@ export default async function ShortCodePage({ params }: { params: { code: string
     const { data: article, error } = await supabase
       .from('articles')
       .select('id, title, status, views, short_code')
-      .eq('short_code', params.code)
+      .eq('short_code', code)
       .eq('status', 'published')
       .single()
     
