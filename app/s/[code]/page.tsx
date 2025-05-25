@@ -5,12 +5,12 @@ import supabase from '@/lib/supabase'
 // 최소한의 테스트 버전
 export const dynamic = 'force-dynamic'
 
-// 메타데이터 생성 (소셜 공유용)
+// 메타데이터 생성
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   try {
     const { code } = await params
     
-    console.log('generateMetadata 호출, code:', code)
+    console.log('=== 숏 URL generateMetadata 시작 ===', code)
     
     // 아티클 조회
     const { data: article, error } = await supabase
@@ -27,13 +27,17 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         published_at,
         created_at,
         updated_at,
-        category:categories(name, color)
+        categories!inner(name, color)
       `)
       .eq('short_code', code)
       .eq('status', 'published')
       .single()
     
-    console.log('generateMetadata DB 결과:', { found: !!article, error: error?.message })
+    console.log('숏 URL DB 쿼리 결과:', {
+      found: !!article,
+      error: error?.message,
+      thumbnail: article?.thumbnail
+    })
     
     if (error || !article) {
       return {
@@ -45,38 +49,20 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const title = article.seo_title || article.title
     const description = article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
-    const extractImageFromContent = (content: string): string | null => {
-      try {
-        const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i)
-        return imgMatch ? imgMatch[1] : null
-      } catch {
-        return null
+    
+    // 이미지 URL 처리
+    let imageUrl = 'https://pickteum.com/pickteum_og.png'
+    if (article.thumbnail) {
+      if (article.thumbnail.startsWith('http')) {
+        imageUrl = article.thumbnail
+      } else if (article.thumbnail.startsWith('/')) {
+        imageUrl = `https://pickteum.com${article.thumbnail}`
+      } else {
+        imageUrl = `https://pickteum.com/${article.thumbnail}`
       }
     }
 
-    const imageUrl = (() => {
-      if (article.thumbnail) {
-        return article.thumbnail.startsWith('http') 
-          ? article.thumbnail 
-          : `https://pickteum.com${article.thumbnail}`
-      }
-      
-      const contentImage = extractImageFromContent(article.content || '')
-      if (contentImage) {
-        return contentImage.startsWith('http') 
-          ? contentImage 
-          : `https://pickteum.com${contentImage}`
-      }
-      
-      return 'https://pickteum.com/pickteum_og.png'
-    })()
-
-    console.log('썸네일 처리:', {
-      originalThumbnail: article.thumbnail,
-      hasThumbnail: !!article.thumbnail,
-      thumbnailType: typeof article.thumbnail,
-      finalImageUrl: imageUrl
-    })
+    console.log('숏 URL 최종 이미지 URL:', imageUrl)
 
     return {
       title: `${title} | 픽틈`,
@@ -84,13 +70,13 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       keywords: article.tags?.join(', ') || '',
       authors: [{ name: article.author }],
       openGraph: {
-        title,
-        description,
+        title: title,
+        description: description,
         type: 'article',
         publishedTime: article.published_at || article.created_at,
         modifiedTime: article.updated_at,
         authors: [article.author],
-        section: article.category?.name || '미분류',
+        section: article.categories?.name || '미분류',
         tags: article.tags || [],
         images: [
           {
@@ -102,19 +88,19 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         ],
         url: `https://pickteum.com/s/${code}`,
         siteName: '픽틈',
+        locale: 'ko_KR',
       },
       twitter: {
         card: 'summary_large_image',
-        title,
-        description,
+        title: title,
+        description: description,
         images: [imageUrl],
-      },
-      alternates: {
-        canonical: `/article/${article.id}`,
+        creator: '@pickteum',
+        site: '@pickteum',
       },
     }
   } catch (error) {
-    console.error('generateMetadata 오류:', error)
+    console.error('숏 URL generateMetadata 오류:', error)
     return {
       title: '오류가 발생했습니다 | 픽틈',
       description: '페이지를 불러오는 중 오류가 발생했습니다.',
@@ -122,65 +108,29 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   }
 }
 
-// 가장 간단한 테스트 버전
+// 페이지 컴포넌트
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   
-  console.log('단축 URL 접근:', code)
+  console.log('숏 URL 접근:', code)
   
-  // 코드 유효성 검사
   if (!code || code.length !== 6) {
-    console.log('잘못된 코드 형식:', code)
     notFound()
   }
   
-  // 아티클 조회
+  // 아티클 조회 및 리다이렉트
   const { data: article, error } = await supabase
     .from('articles')
-    .select(`
-      id, 
-      title, 
-      thumbnail,
-      status, 
-      views
-    `)
+    .select('id, title, views')
     .eq('short_code', code)
     .eq('status', 'published')
     .single()
   
-  console.log('DB 조회 결과:', { found: !!article, error: error?.message })
-  
   if (error || !article) {
-    console.log('아티클을 찾을 수 없음:', code)
-    
-    // 디버깅용: 존재하는 코드들 표시
-    const { data: existingCodes } = await supabase
-      .from('articles')
-      .select('short_code, title')
-      .not('short_code', 'is', null)
-      .eq('status', 'published')
-      .limit(5)
-    
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
-        <h1>❌ 단축 URL을 찾을 수 없습니다</h1>
-        <p>요청된 코드: <strong>{code}</strong></p>
-        <h3>현재 존재하는 코드들:</h3>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {existingCodes?.map((item) => (
-            <li key={item.short_code} style={{ margin: '10px 0', padding: '10px', border: '1px solid #ddd' }}>
-              <strong>{item.short_code}</strong> → {item.title}
-            </li>
-          ))}
-        </ul>
-        <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
-      </div>
-    )
+    notFound()
   }
-
-  console.log('아티클 발견, 리다이렉트:', `/article/${article.id}`)
   
-  // 조회수 증가 (백그라운드)
+  // 조회수 증가 (비동기)
   supabase
     .from('articles')
     .update({ views: (article.views || 0) + 1 })
