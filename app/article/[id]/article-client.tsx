@@ -26,6 +26,14 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   const [shortUrl, setShortUrl] = useState<string>('')
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [currentUrl, setCurrentUrl] = useState<string>('') // 클라이언트에서만 설정
+
+  // 클라이언트에서만 현재 URL 설정
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUrl(window.location.href)
+    }
+  }, [])
 
   useEffect(() => {
     if (initialArticle) {
@@ -119,7 +127,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   // 클립보드 복사 핸들러
   const handleCopyToClipboard = async () => {
     try {
-      if (navigator.clipboard) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(shortUrl)
       } else {
         // 폴백 방법
@@ -303,15 +311,17 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
               </div>
             </div>
 
-            {/* 원본 링크 (참고용) */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-500">원본 링크 (참고)</label>
-              <div className="p-2 bg-gray-50 border rounded-lg">
-                <span className="text-xs text-gray-600 break-all">
-                  {window.location.href}
-                </span>
+            {/* 원본 링크 (참고용) - 클라이언트에서만 표시 */}
+            {currentUrl && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500">원본 링크 (참고)</label>
+                <div className="p-2 bg-gray-50 border rounded-lg">
+                  <span className="text-xs text-gray-600 break-all">
+                    {currentUrl}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 안내 메시지 */}
             <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
