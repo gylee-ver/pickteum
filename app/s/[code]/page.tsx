@@ -45,7 +45,9 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const title = article.seo_title || article.title
     const description = article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
-    const imageUrl = article.thumbnail || '/pickteum_og.png'
+    const imageUrl = article.thumbnail 
+      ? (article.thumbnail.startsWith('http') ? article.thumbnail : `https://pickteum.com${article.thumbnail}`)
+      : 'https://pickteum.com/pickteum_og.png'
 
     return {
       title: `${title} | 픽틈`,
@@ -69,6 +71,8 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
             alt: title,
           },
         ],
+        url: `https://pickteum.com/s/${code}`,
+        siteName: '픽틈',
       },
       twitter: {
         card: 'summary_large_image',
