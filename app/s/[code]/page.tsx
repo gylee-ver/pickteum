@@ -68,78 +68,64 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
 // 가장 간단한 테스트 버전
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
-  try {
-    const { code } = await params
+  const { code } = await params
+  
+  console.log('단축 URL 접근:', code)
+  
+  // 코드 유효성 검사
+  if (!code || code.length !== 6) {
+    console.log('잘못된 코드 형식:', code)
+    notFound()
+  }
+  
+  // 아티클 조회
+  const { data: article, error } = await supabase
+    .from('articles')
+    .select('id, title, status, views')
+    .eq('short_code', code)
+    .eq('status', 'published')
+    .single()
+  
+  console.log('DB 조회 결과:', { found: !!article, error: error?.message })
+  
+  if (error || !article) {
+    console.log('아티클을 찾을 수 없음:', code)
     
-    console.log('단축 URL 접근:', code)
-    
-    // 코드 유효성 검사
-    if (!code || code.length !== 6) {
-      console.log('잘못된 코드 형식:', code)
-      notFound()
-    }
-    
-    // 아티클 조회
-    const { data: article, error } = await supabase
+    // 디버깅용: 존재하는 코드들 표시
+    const { data: existingCodes } = await supabase
       .from('articles')
-      .select('id, title, status, views')
-      .eq('short_code', code)
+      .select('short_code, title')
+      .not('short_code', 'is', null)
       .eq('status', 'published')
-      .single()
-    
-    console.log('DB 조회 결과:', { found: !!article, error: error?.message })
-    
-    if (error || !article) {
-      console.log('아티클을 찾을 수 없음:', code)
-      
-      // 디버깅용: 존재하는 코드들 표시
-      const { data: existingCodes } = await supabase
-        .from('articles')
-        .select('short_code, title')
-        .not('short_code', 'is', null)
-        .eq('status', 'published')
-        .limit(5)
-      
-      return (
-        <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
-          <h1>❌ 단축 URL을 찾을 수 없습니다</h1>
-          <p>요청된 코드: <strong>{code}</strong></p>
-          <h3>현재 존재하는 코드들:</h3>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {existingCodes?.map((item) => (
-              <li key={item.short_code} style={{ margin: '10px 0', padding: '10px', border: '1px solid #ddd' }}>
-                <strong>{item.short_code}</strong> → {item.title}
-              </li>
-            ))}
-          </ul>
-          <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
-        </div>
-      )
-    }
-
-    console.log('아티클 발견, 리다이렉트:', `/article/${article.id}`)
-    
-    // 조회수 증가 (백그라운드)
-    supabase
-      .from('articles')
-      .update({ views: (article.views || 0) + 1 })
-      .eq('id', article.id)
-      .then(() => console.log('조회수 증가 성공'))
-      .catch(err => console.error('조회수 증가 실패:', err))
-
-    // 리다이렉트
-    redirect(`/article/${article.id}`)
-    
-  } catch (error) {
-    console.error('단축 URL 처리 오류:', error)
+      .limit(5)
     
     return (
       <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
-        <h1>⚠️ 오류 발생</h1>
-        <p>단축 URL 처리 중 오류가 발생했습니다.</p>
-        <p>오류: {String(error)}</p>
+        <h1>❌ 단축 URL을 찾을 수 없습니다</h1>
+        <p>요청된 코드: <strong>{code}</strong></p>
+        <h3>현재 존재하는 코드들:</h3>
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {existingCodes?.map((item) => (
+            <li key={item.short_code} style={{ margin: '10px 0', padding: '10px', border: '1px solid #ddd' }}>
+              <strong>{item.short_code}</strong> → {item.title}
+            </li>
+          ))}
+        </ul>
         <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
       </div>
     )
   }
+
+  console.log('아티클 발견, 리다이렉트:', `/article/${article.id}`)
+  
+  // 조회수 증가 (백그라운드)
+  supabase
+    .from('articles')
+    .update({ views: (article.views || 0) + 1 })
+    .eq('id', article.id)
+    .then(() => console.log('조회수 증가 성공'))
+    .catch(err => console.error('조회수 증가 실패:', err))
+
+  // 리다이렉트 (try-catch 없이)
+  redirect(`/article/${article.id}`)
 } 
