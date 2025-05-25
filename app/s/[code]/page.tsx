@@ -66,41 +66,16 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   }
 }
 
-// 메인 페이지 컴포넌트
+// 가장 간단한 테스트 버전
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
-  try {
-    const { code } = await params
-    
-    // 기본 유효성 검사
-    if (!code) {
-      notFound()
-    }
-    
-    // 아티클 조회
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select('id, title, status, views')
-      .eq('short_code', code)
-      .eq('status', 'published')
-      .single()
-    
-    if (error || !article) {
-      notFound()
-    }
-
-    // 조회수 증가 (백그라운드)
-    supabase
-      .from('articles')
-      .update({ views: (article.views || 0) + 1 })
-      .eq('id', article.id)
-      .then(() => console.log('조회수 증가'))
-      .catch(() => console.log('조회수 증가 실패'))
-
-    // 즉시 리다이렉트
-    redirect(`/article/${article.id}`)
-    
-  } catch (error) {
-    console.error('단축 URL 오류:', error)
-    notFound()
-  }
+  const { code } = await params
+  
+  return (
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <h1>단축 URL 테스트</h1>
+      <p>코드: <strong>{code}</strong></p>
+      <p>이 페이지가 보인다면 동적 라우트가 작동합니다!</p>
+      <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
+    </div>
+  )
 } 
