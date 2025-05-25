@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import supabase from '@/lib/supabase'
 
-// 동적 라우트 강제 설정
+// 최소한의 테스트 버전
 export const dynamic = 'force-dynamic'
 
 // 메타데이터 생성
@@ -71,11 +71,16 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   const { code } = await params
   
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
+    <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
       <h1>단축 URL 테스트</h1>
-      <p>코드: <strong>{code}</strong></p>
-      <p>이 페이지가 보인다면 동적 라우트가 작동합니다!</p>
-      <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
+      <p>요청된 코드: <strong style={{ color: 'red' }}>{code}</strong></p>
+      <p>코드 길이: {code?.length || 0}</p>
+      <p>현재 시간: {new Date().toLocaleString()}</p>
+      <p style={{ color: 'green' }}>✅ 동적 라우트가 정상 작동합니다!</p>
+      <div style={{ marginTop: '20px' }}>
+        <a href="/" style={{ color: 'blue', marginRight: '10px' }}>홈으로</a>
+        <a href="/test-short" style={{ color: 'blue' }}>테스트 페이지로</a>
+      </div>
     </div>
   )
 } 
