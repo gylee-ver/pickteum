@@ -15,11 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 interface ArticleClientProps {
   articleId: string
-  initialArticle?: any // 초기 아티클 데이터
+  initialArticle: any
 }
 
 export default function ArticleClient({ articleId, initialArticle }: ArticleClientProps) {
-  const [article, setArticle] = useState<any>(initialArticle || null)
+  const [article, setArticle] = useState<any>(initialArticle)
   const [relatedArticles, setRelatedArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialArticle)
   const [showShareModal, setShowShareModal] = useState(false)

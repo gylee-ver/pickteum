@@ -206,7 +206,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <ArticleClient article={article} />
+        <ArticleClient 
+          articleId={article.id} 
+          initialArticle={article} 
+        />
       </>
     )
 
