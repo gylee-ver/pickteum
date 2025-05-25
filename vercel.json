@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/s/[code]/page.tsx": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/s/:code",
+      "destination": "/s/:code"
+    }
+  ]
+} 
