@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     
     console.log('=== 숏 URL generateMetadata 시작 ===', code)
     
-    // 아티클 조회
+    // LEFT JOIN 사용으로 카테고리가 없어도 아티클 조회 가능
     const { data: article, error } = await supabase
       .from('articles')
       .select(`
@@ -27,7 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         published_at,
         created_at,
         updated_at,
-        categories!inner(name, color)
+        category_id,
+        category:categories(name, color)
       `)
       .eq('short_code', code)
       .eq('status', 'published')
@@ -36,10 +37,15 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     console.log('숏 URL DB 쿼리 결과:', {
       found: !!article,
       error: error?.message,
-      thumbnail: article?.thumbnail
+      articleId: article?.id,
+      title: article?.title,
+      thumbnail: article?.thumbnail,
+      category: article?.category,
+      categoryId: article?.category_id
     })
     
     if (error || !article) {
+      console.log('숏 URL 아티클을 찾을 수 없음:', error?.message)
       return {
         title: '페이지를 찾을 수 없습니다 | 픽틈',
         description: '요청하신 콘텐츠가 존재하지 않거나 삭제되었을 수 있습니다.',
@@ -50,7 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const description = article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
     
-    // 이미지 URL 처리
+    // 이미지 URL 처리 (절대 URL로 통일)
     let imageUrl = 'https://pickteum.com/pickteum_og.png'
     if (article.thumbnail) {
       if (article.thumbnail.startsWith('http')) {
@@ -64,7 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
     console.log('숏 URL 최종 이미지 URL:', imageUrl)
 
-    return {
+    const metadata: Metadata = {
       title: `${title} | 픽틈`,
       description,
       keywords: article.tags?.join(', ') || '',
@@ -76,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         publishedTime: article.published_at || article.created_at,
         modifiedTime: article.updated_at,
         authors: [article.author],
-        section: article.categories?.name || '미분류',
+        section: article.category?.name || '미분류',
         tags: article.tags || [],
         images: [
           {
@@ -98,7 +104,19 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         creator: '@pickteum',
         site: '@pickteum',
       },
+      alternates: {
+        canonical: `https://pickteum.com/article/${article.id}`,
+      },
     }
+
+    console.log('=== 숏 URL generateMetadata 완료 ===', {
+      title: metadata.title,
+      ogTitle: metadata.openGraph?.title,
+      ogImage: metadata.openGraph?.images?.[0]
+    })
+
+    return metadata
+
   } catch (error) {
     console.error('숏 URL generateMetadata 오류:', error)
     return {
@@ -112,13 +130,14 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   
-  console.log('숏 URL 접근:', code)
+  console.log('숏 URL 페이지 접근:', code)
   
   if (!code || code.length !== 6) {
+    console.log('잘못된 코드 형식:', code)
     notFound()
   }
   
-  // 아티클 조회 및 리다이렉트
+  // 간단한 쿼리로 아티클 존재 확인
   const { data: article, error } = await supabase
     .from('articles')
     .select('id, title, views')
@@ -126,11 +145,14 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     .eq('status', 'published')
     .single()
   
+  console.log('숏 URL 아티클 확인:', { found: !!article, error: error?.message })
+  
   if (error || !article) {
+    console.log('숏 URL 아티클을 찾을 수 없음:', code)
     notFound()
   }
   
-  // 조회수 증가 (비동기)
+  // 조회수 증가 (비동기, 에러 무시)
   supabase
     .from('articles')
     .update({ views: (article.views || 0) + 1 })
@@ -138,6 +160,8 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     .then(() => console.log('조회수 증가 성공'))
     .catch(err => console.error('조회수 증가 실패:', err))
 
+  console.log('숏 URL 리다이렉트:', `/article/${article.id}`)
+  
   // 리다이렉트
   redirect(`/article/${article.id}`)
 } 

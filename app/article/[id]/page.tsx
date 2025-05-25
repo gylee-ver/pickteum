@@ -11,9 +11,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   try {
     const { id } = await params
     
-    console.log('=== generateMetadata 시작 ===', id)
+    console.log('=== 기본 아티클 generateMetadata 시작 ===', id)
     
-    // 명시적 필드 선택으로 확실한 데이터 가져오기
+    // 안정적인 쿼리 (LEFT JOIN)
     let query = supabase
       .from('articles')
       .select(`
@@ -35,34 +35,32 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .eq('status', 'published')
       .single()
 
-    // slug 또는 id로 검색
     const { data: article, error } = await query.or(`slug.eq.${id},id.eq.${id}`)
 
-    console.log('DB 쿼리 결과:', {
+    console.log('기본 아티클 DB 쿼리 결과:', {
       found: !!article,
       error: error?.message,
-      thumbnail: article?.thumbnail,
+      articleId: article?.id,
       title: article?.title,
+      thumbnail: article?.thumbnail,
       category: article?.category,
       categoryId: article?.category_id
     })
 
     if (error || !article) {
-      console.log('아티클을 찾을 수 없음:', error?.message)
+      console.log('기본 아티클을 찾을 수 없음:', error?.message)
       return {
         title: '페이지를 찾을 수 없습니다 | 픽틈',
         description: '요청하신 콘텐츠가 존재하지 않거나 삭제되었을 수 있습니다.',
       }
     }
 
-    // 메타데이터 구성
     const title = article.seo_title || article.title
     const description = article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '')
     
     // 이미지 URL 처리 (절대 URL로 통일)
-    let imageUrl = 'https://pickteum.com/pickteum_og.png' // 기본값
-    
+    let imageUrl = 'https://pickteum.com/pickteum_og.png'
     if (article.thumbnail) {
       if (article.thumbnail.startsWith('http')) {
         imageUrl = article.thumbnail
@@ -73,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
 
-    console.log('최종 이미지 URL:', imageUrl)
+    console.log('기본 아티클 최종 이미지 URL:', imageUrl)
 
     const metadata: Metadata = {
       title: `${title} | 픽틈`,
@@ -114,11 +112,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
 
-    console.log('=== generateMetadata 완료 ===')
+    console.log('=== 기본 아티클 generateMetadata 완료 ===', {
+      title: metadata.title,
+      ogTitle: metadata.openGraph?.title,
+      ogImage: metadata.openGraph?.images?.[0]
+    })
+
     return metadata
 
   } catch (error) {
-    console.error('generateMetadata 오류:', error)
+    console.error('기본 아티클 generateMetadata 오류:', error)
     return {
       title: '오류가 발생했습니다 | 픽틈',
       description: '페이지를 불러오는 중 오류가 발생했습니다.',
