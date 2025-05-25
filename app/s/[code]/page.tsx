@@ -235,7 +235,33 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     redirect(`/article/${article.id}`)
 
   } catch (error) {
-    console.error('숏 URL 페이지 치명적 오류:', error)
+    // NEXT_REDIRECT 오류는 정상적인 리다이렉트이므로 무시
+    if (error && typeof error === 'object' && 'digest' in error && 
+        typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
+      console.log('숏 URL 정상 리다이렉트')
+      // 리다이렉트는 정상 동작이므로 아무것도 하지 않음
+      return
+    }
+    
+    console.error('숏 URL 페이지 실제 오류:', error)
     notFound()
   }
+  
+  // try-catch 밖에서 redirect 실행
+  const { code } = await params
+  
+  if (code && typeof code === 'string' && code.length === 6) {
+    const { data: article } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('short_code', code)
+      .eq('status', 'published')
+      .single()
+    
+    if (article) {
+      redirect(`/article/${article.id}`)
+    }
+  }
+  
+  notFound()
 } 
