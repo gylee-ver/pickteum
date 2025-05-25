@@ -95,15 +95,15 @@ export async function generateMetadata({ params }: { params: { code: string } })
   }
 }
 
-// 크롤러 감지 함수 (카카오톡 User-Agent 개선)
+// 크롤러 감지 함수
 function isCrawler(userAgent: string): boolean {
-  const crawlerRegex = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|discordbot|slackbot|whatsapp|telegram|kakaotalk|kakao|naver|google|bing|preview/i
+  const crawlerRegex = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|discordbot|slackbot|whatsapp|telegram|kakaotalk-scrap|naver|google|bing|preview/i
   return crawlerRegex.test(userAgent)
 }
 
-// 카카오톡 인앱브라우저인지 확인
+// 카카오톡 확인 (크롤러와 인앱브라우저 구분)
 function isKakaoInApp(userAgent: string): boolean {
-  return /kakaotalk/i.test(userAgent)
+  return /kakaotalk/i.test(userAgent) && !/kakaotalk-scrap/i.test(userAgent)
 }
 
 export default async function ShortCodePage({ params }: { params: { code: string } }) {
@@ -161,7 +161,7 @@ export default async function ShortCodePage({ params }: { params: { code: string
     if (error || !article) {
       console.log('단축 URL을 찾을 수 없음:', { code, error })
       
-      // 모든 단축 코드 확인 (디버깅용)
+      // 디버깅용: 현재 존재하는 단축 코드들 확인
       const { data: allCodes } = await supabase
         .from('articles')
         .select('short_code, title')
@@ -188,13 +188,13 @@ export default async function ShortCodePage({ params }: { params: { code: string
         })
     }
 
-    // 카카오톡 인앱브라우저는 특별 처리
+    // 카카오톡 인앱브라우저는 즉시 리다이렉트
     if (isKakaoInApp(userAgent)) {
       console.log('카카오톡 인앱브라우저 감지 - 즉시 리다이렉트')
       redirect(`/article/${article.id}`)
     }
 
-    // 일반 크롤러는 메타데이터 페이지 표시
+    // 크롤러는 메타데이터 페이지 표시 (CSP 안전한 버전)
     if (isCrawler(userAgent)) {
       console.log('크롤러 감지 - 메타데이터 페이지 표시')
       
@@ -213,20 +213,59 @@ export default async function ShortCodePage({ params }: { params: { code: string
             <meta name="twitter:description" content={article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160)} />
             <meta name="twitter:image" content={article.thumbnail || '/pickteum_og.png'} />
             <link rel="canonical" href={`/article/${article.id}`} />
-            <meta httpEquiv="refresh" content={`3;url=/article/${article.id}`} />
+            {/* Meta refresh로만 리다이렉트 (CSP 안전) */}
+            <meta httpEquiv="refresh" content={`2;url=/article/${article.id}`} />
           </head>
           <body>
-            <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'system-ui' }}>
-              <h1>{article.title}</h1>
-              <p style={{ color: '#666' }}>{article.category?.name || '미분류'} · {article.author}</p>
-              <p style={{ marginTop: '20px' }}>
-                <a href={`/article/${article.id}`} style={{ color: '#FFC83D', textDecoration: 'none' }}>
-                  전체 글 보기 →
-                </a>
+            <div style={{ 
+              padding: '20px', 
+              textAlign: 'center', 
+              fontFamily: 'system-ui',
+              maxWidth: '480px',
+              margin: '0 auto',
+              minHeight: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  border: '4px solid #FFC83D',
+                  borderTop: '4px solid transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  margin: '0 auto 20px'
+                }} />
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                    @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                    }
+                  `
+                }} />
+              </div>
+              <h1 style={{ fontSize: '18px', marginBottom: '8px', color: '#212121' }}>
+                {article.title}
+              </h1>
+              <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
+                {article.category?.name || '미분류'} · {article.author}
               </p>
-              <script dangerouslySetInnerHTML={{
-                __html: `setTimeout(function(){window.location.href='/article/${article.id}';}, 1000);`
-              }} />
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+                페이지로 이동 중...
+              </p>
+              <p style={{ fontSize: '12px', color: '#999' }}>
+                자동으로 이동하지 않으면{' '}
+                <a 
+                  href={`/article/${article.id}`} 
+                  style={{ color: '#FFC83D', textDecoration: 'none' }}
+                >
+                  여기를 클릭
+                </a>
+                하세요
+              </p>
             </div>
           </body>
         </html>
