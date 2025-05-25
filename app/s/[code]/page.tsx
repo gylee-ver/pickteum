@@ -5,11 +5,14 @@ import supabase from '@/lib/supabase'
 // 최소한의 테스트 버전
 export const dynamic = 'force-dynamic'
 
-// 메타데이터 생성
+// 메타데이터 생성 (소셜 공유용)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   try {
     const { code } = await params
     
+    console.log('generateMetadata 호출, code:', code)
+    
+    // 아티클 조회
     const { data: article, error } = await supabase
       .from('articles')
       .select(`
@@ -30,6 +33,8 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       .eq('status', 'published')
       .single()
     
+    console.log('generateMetadata DB 결과:', { found: !!article, error: error?.message })
+    
     if (error || !article) {
       return {
         title: '페이지를 찾을 수 없습니다 | 픽틈',
@@ -45,11 +50,25 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     return {
       title: `${title} | 픽틈`,
       description,
+      keywords: article.tags?.join(', ') || '',
+      authors: [{ name: article.author }],
       openGraph: {
         title,
         description,
         type: 'article',
-        images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+        publishedTime: article.published_at || article.created_at,
+        modifiedTime: article.updated_at,
+        authors: [article.author],
+        section: article.category?.name || '미분류',
+        tags: article.tags || [],
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: title,
+          },
+        ],
       },
       twitter: {
         card: 'summary_large_image',
@@ -57,10 +76,14 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         description,
         images: [imageUrl],
       },
+      alternates: {
+        canonical: `/article/${article.id}`,
+      },
     }
   } catch (error) {
+    console.error('generateMetadata 오류:', error)
     return {
-      title: '오류 | 픽틈',
+      title: '오류가 발생했습니다 | 픽틈',
       description: '페이지를 불러오는 중 오류가 발생했습니다.',
     }
   }
@@ -126,6 +149,6 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     .then(() => console.log('조회수 증가 성공'))
     .catch(err => console.error('조회수 증가 실패:', err))
 
-  // 리다이렉트 (try-catch 없이)
+  // 리다이렉트
   redirect(`/article/${article.id}`)
 } 
