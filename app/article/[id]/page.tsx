@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         created_at,
         updated_at,
         category_id,
-        categories!inner(name, color)
+        category:categories(id, name, color)
       `)
       .eq('status', 'published')
       .single()
@@ -42,7 +42,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       found: !!article,
       error: error?.message,
       thumbnail: article?.thumbnail,
-      title: article?.title
+      title: article?.title,
+      category: article?.category,
+      categoryId: article?.category_id
     })
 
     if (error || !article) {
@@ -85,7 +87,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         publishedTime: article.published_at || article.created_at,
         modifiedTime: article.updated_at,
         authors: [article.author],
-        section: article.categories?.name || '미분류',
+        section: article.category?.name || '미분류',
         tags: article.tags || [],
         images: [
           {
@@ -147,7 +149,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         updated_at,
         views,
         category_id,
-        categories!inner(id, name, color)
+        category:categories(id, name, color)
       `)
       .eq('status', 'published')
       .single()
@@ -196,7 +198,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         "@id": `https://pickteum.com/article/${id}`
       },
       "url": `https://pickteum.com/article/${id}`,
-      "articleSection": article.categories?.name || '미분류',
+      "articleSection": article.category?.name || '미분류',
       "keywords": article.tags?.join(', ') || ''
     }
 
