@@ -213,29 +213,23 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     
     if (error || !article) {
       console.log('숏 URL: 아티클을 찾을 수 없음')
-      
-      // 디버깅용: 404 페이지에서 정보 표시
-      return (
-        <div style={{ padding: '20px', fontFamily: 'system-ui' }}>
-          <h1>🔍 단축 URL 디버깅</h1>
-          <p><strong>요청된 코드:</strong> {code}</p>
-          <p><strong>코드 길이:</strong> {code?.length}</p>
-          <p><strong>오류:</strong> {error?.message}</p>
-          <p><strong>오류 코드:</strong> {error?.code}</p>
-          <br />
-          <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>
-        </div>
-      )
+      notFound()
     }
     
     console.log('숏 URL: 아티클 발견, 리다이렉트 중:', `/article/${article.id}`)
     
-    // 조회수 증가 (에러 무시)
+    // ✅ 수정된 조회수 증가 로직 (올바른 Promise 처리)
     supabase
       .from('articles')
       .update({ views: (article.views || 0) + 1 })
       .eq('id', article.id)
-      .catch((err) => console.log('조회수 증가 실패 (무시):', err))
+      .then(({ error }) => {
+        if (error) {
+          console.log('조회수 증가 실패 (무시):', error.message)
+        } else {
+          console.log('조회수 증가 성공')
+        }
+      })
     
     // 리다이렉트
     redirect(`/article/${article.id}`)
