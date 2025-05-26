@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils'
 
 // 환경 변수 체크
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+if (!supabaseUrl || !supabaseKey) {
+  logger.warn('Supabase 환경 변수가 설정되지 않았습니다.')
+}
+
+const supabase = createClient(supabaseUrl!, supabaseKey!)
+
 export async function POST(request: NextRequest) {
   // 환경 변수가 없으면 에러 대신 경고 반환
   if (!supabaseUrl || !supabaseKey) {
-    console.warn('Supabase 환경 변수가 설정되지 않았습니다.')
+    logger.warn('Supabase 환경 변수가 설정되지 않았습니다.')
     return NextResponse.json({ 
       success: false, 
       error: 'Supabase configuration missing',
@@ -16,11 +24,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Supabase 클라이언트를 동적으로 생성
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    console.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
+    logger.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
     
     // 현재 시간 (UTC)
     const now = new Date().toISOString()
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
       .not('published_at', 'is', null)
 
     if (fetchError) {
-      console.error('예약된 글 조회 오류:', fetchError)
+      logger.error('예약된 글 조회 오류:', fetchError)
       return NextResponse.json({ 
         success: false, 
         error: fetchError.message 
@@ -42,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!scheduledArticles || scheduledArticles.length === 0) {
-      console.log('📝 발행할 예약된 글이 없습니다.')
+      logger.log('📝 발행할 예약된 글이 없습니다.')
       return NextResponse.json({ 
         success: true, 
         message: '발행할 예약된 글이 없습니다.',
@@ -50,9 +54,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`📚 발행 대상 글 ${scheduledArticles.length}개 발견:`)
+    logger.log(`📚 발행 대상 글 ${scheduledArticles.length}개 발견:`)
     scheduledArticles.forEach(article => {
-      console.log(`- ${article.title} (예약 시간: ${article.published_at})`)
+      logger.log(`- ${article.title} (예약 시간: ${article.published_at})`)
     })
 
     // 예약된 글들을 발행 상태로 변경
@@ -68,16 +72,16 @@ export async function POST(request: NextRequest) {
       .select('id, title, published_at')
 
     if (updateError) {
-      console.error('글 발행 오류:', updateError)
+      logger.error('글 발행 오류:', updateError)
       return NextResponse.json({ 
         success: false, 
         error: updateError.message 
       }, { status: 500 })
     }
 
-    console.log(`✅ ${updatedArticles?.length || 0}개 글이 성공적으로 발행되었습니다.`)
+    logger.log(`✅ ${updatedArticles?.length || 0}개 글이 성공적으로 발행되었습니다.`)
     updatedArticles?.forEach(article => {
-      console.log(`- 발행됨: ${article.title}`)
+      logger.log(`- 발행됨: ${article.title}`)
     })
 
     return NextResponse.json({ 
@@ -88,7 +92,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('예약 발행 처리 중 예외 발생:', error)
+    logger.error('예약 발행 처리 중 예외 발생:', error)
     return NextResponse.json({ 
       success: false, 
       error: '예상치 못한 오류가 발생했습니다.' 
@@ -98,5 +102,76 @@ export async function POST(request: NextRequest) {
 
 // GET 요청도 지원 (테스트용)
 export async function GET() {
-  return POST(new NextRequest('http://localhost:3000/api/posts/publish-scheduled', { method: 'POST' }))
+  try {
+    const now = new Date().toISOString()
+    
+    logger.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
+    
+    // 현재 시간보다 이전에 예약된 글들 조회
+    const { data: scheduledArticles, error: fetchError } = await supabase
+      .from('articles')
+      .select('id, title, published_at')
+      .eq('status', 'scheduled')
+      .lte('published_at', now)
+      .order('published_at', { ascending: true })
+    
+    if (fetchError) {
+      logger.error('예약된 글 조회 오류:', fetchError)
+      return NextResponse.json({ 
+        error: '예약된 글 조회 실패', 
+        details: fetchError.message 
+      }, { status: 500 })
+    }
+    
+    if (!scheduledArticles || scheduledArticles.length === 0) {
+      logger.log('📝 발행할 예약된 글이 없습니다.')
+      return NextResponse.json({ 
+        message: '발행할 예약된 글이 없습니다',
+        publishedCount: 0 
+      })
+    }
+    
+    logger.log(`📚 발행 대상 글 ${scheduledArticles.length}개 발견:`)
+    scheduledArticles.forEach(article => {
+      logger.log(`- ${article.title} (예약 시간: ${article.published_at})`)
+    })
+    
+    // 글들을 published 상태로 변경
+    const articleIds = scheduledArticles.map(article => article.id)
+    
+    const { data: updatedArticles, error: updateError } = await supabase
+      .from('articles')
+      .update({ 
+        status: 'published',
+        published_at: now  // 실제 발행 시간으로 업데이트
+      })
+      .in('id', articleIds)
+      .select('id, title')
+    
+    if (updateError) {
+      logger.error('글 발행 오류:', updateError)
+      return NextResponse.json({ 
+        error: '글 발행 실패', 
+        details: updateError.message 
+      }, { status: 500 })
+    }
+    
+    logger.log(`✅ ${updatedArticles?.length || 0}개 글이 성공적으로 발행되었습니다.`)
+    updatedArticles?.forEach(article => {
+      logger.log(`- 발행됨: ${article.title}`)
+    })
+    
+    return NextResponse.json({
+      message: '예약된 글이 성공적으로 발행되었습니다',
+      publishedCount: updatedArticles?.length || 0,
+      publishedArticles: updatedArticles
+    })
+    
+  } catch (error) {
+    logger.error('예약 발행 처리 중 예외 발생:', error)
+    return NextResponse.json({ 
+      error: '서버 오류가 발생했습니다',
+      details: error instanceof Error ? error.message : '알 수 없는 오류'
+    }, { status: 500 })
+  }
 } 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
+import { logger, getImageUrl } from "@/lib/utils"
 
 // 백업용 샘플 데이터 (API 로드 실패 시 사용)
 const FALLBACK_CONTENT = [
@@ -47,13 +48,13 @@ export default function ContentFeed() {
           .select('*')
         
         if (error) {
-          console.error('카테고리 로드 오류:', error)
+          logger.error('카테고리 로드 오류:', error)
           return
         }
         
         setCategories(data || [])
       } catch (err) {
-        console.error('카테고리 로드 중 예외:', err)
+        logger.error('카테고리 로드 중 예외:', err)
       }
     }
     
@@ -100,31 +101,15 @@ export default function ContentFeed() {
       const { data, error } = await query
       
       if (error) {
-        console.error('아티클 로드 오류:', error)
+        logger.error('아티클 로드 오류:', error)
         setError(true)
         return
       }
       
-      console.log('로드된 아티클:', data)
+      logger.log('로드된 아티클:', data)
       
       // 아티클 데이터 변환
       const formattedData = data.map(article => {
-        // 안전한 썸네일 URL 처리
-        const getImageUrl = (thumbnail: string | null) => {
-          if (!thumbnail) return '/placeholder.svg'
-          
-          if (thumbnail.startsWith('http')) {
-            return thumbnail
-          }
-          
-          if (thumbnail.startsWith('/')) {
-            return `https://www.pickteum.com${thumbnail}`
-          }
-          
-          // Supabase 스토리지 경로로 가정
-          return `https://jpdjalmsoooztqvhuzyx.supabase.co/storage/v1/object/public/article-thumbnails/${thumbnail}`
-        }
-
         return {
           id: article.id,
           title: article.title,
@@ -149,7 +134,7 @@ export default function ContentFeed() {
       setHasMore(data.length === pageSize)
       
     } catch (err) {
-      console.error('아티클 로드 중 예외:', err)
+      logger.error('아티클 로드 중 예외:', err)
       setError(true)
     } finally {
       setLoading(false)

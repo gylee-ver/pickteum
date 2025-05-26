@@ -7,6 +7,7 @@ import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import supabase from "@/lib/supabase"
+import { logger } from "@/lib/utils"
 
 interface SearchResult {
   id: string
@@ -50,13 +51,13 @@ export default function Header() {
         .limit(5)
 
       if (error) {
-        console.error('검색 오류:', error)
+        logger.error('검색 오류:', error)
         setSearchResults([])
       } else {
         setSearchResults(data || [])
       }
     } catch (error) {
-      console.error('검색 중 예외 발생:', error)
+      logger.error('검색 중 예외 발생:', error)
       setSearchResults([])
     } finally {
       setIsSearching(false)

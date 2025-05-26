@@ -1,6 +1,7 @@
 // URL 단축 API
 import { NextRequest, NextResponse } from 'next/server'
 import supabase from '@/lib/supabase'
+import { logger } from '@/lib/utils'
 
 // 6자리 랜덤 코드 생성 (숫자 + 영문자)
 function generateShortCode(): string {
@@ -20,7 +21,7 @@ async function generateUniqueShortCode(): Promise<string> {
   while (attempts < maxAttempts) {
     const code = generateShortCode()
     
-    console.log(`단축 코드 생성 시도 ${attempts + 1}:`, code)
+    logger.log(`단축 코드 생성 시도 ${attempts + 1}:`, code)
     
     const { data, error } = await supabase
       .from('articles')
@@ -28,10 +29,10 @@ async function generateUniqueShortCode(): Promise<string> {
       .eq('short_code', code)
       .single()
     
-    console.log('중복 체크 결과:', { code, found: !!data, error: error?.code })
+    logger.log('중복 체크 결과:', { code, found: !!data, error: error?.code })
     
     if (error && error.code === 'PGRST116') {
-      console.log('고유한 코드 생성 성공:', code)
+      logger.log('고유한 코드 생성 성공:', code)
       return code
     }
     
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
   try {
     const { articleId } = await request.json()
     
-    console.log('단축 URL 생성 요청:', { articleId })
+    logger.log('단축 URL 생성 요청:', { articleId })
     
     if (!articleId) {
       return NextResponse.json({ error: '아티클 ID가 필요합니다' }, { status: 400 })
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       .eq('status', 'published')
       .single()
     
-    console.log('아티클 조회 결과:', {
+    logger.log('아티클 조회 결과:', {
       found: !!article,
       error: articleError?.message,
       existingShortCode: article?.short_code,
@@ -73,13 +74,13 @@ export async function POST(request: NextRequest) {
     let shortCode: string
     
     if (article.short_code) {
-      console.log('기존 short_code 사용:', article.short_code)
+      logger.log('기존 short_code 사용:', article.short_code)
       shortCode = article.short_code
     } else {
-      console.log('새로운 short_code 생성 중...')
+      logger.log('새로운 short_code 생성 중...')
       shortCode = await generateUniqueShortCode()
       
-      console.log('생성된 short_code DB 업데이트 중:', shortCode)
+      logger.log('생성된 short_code DB 업데이트 중:', shortCode)
       
       const { error: updateError } = await supabase
         .from('articles')
@@ -87,11 +88,11 @@ export async function POST(request: NextRequest) {
         .eq('id', articleId)
       
       if (updateError) {
-        console.error('short_code 업데이트 오류:', updateError)
+        logger.error('short_code 업데이트 오류:', updateError)
         return NextResponse.json({ error: '단축 URL 생성에 실패했습니다' }, { status: 500 })
       }
       
-      console.log('short_code DB 업데이트 성공:', shortCode)
+      logger.log('short_code DB 업데이트 성공:', shortCode)
       
       // 업데이트 검증
       const { data: verification } = await supabase
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
         .eq('id', articleId)
         .single()
       
-      console.log('업데이트 검증:', {
+      logger.log('업데이트 검증:', {
         expected: shortCode,
         actual: verification?.short_code,
         match: verification?.short_code === shortCode
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const shortUrl = `${protocol}://${host}/s/${shortCode}`
     
-    console.log('단축 URL 생성 완료:', {
+    logger.log('단축 URL 생성 완료:', {
       shortCode,
       shortUrl,
       articleId,
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('URL 단축 치명적 오류:', error)
+    logger.error('URL 단축 치명적 오류:', error)
     return NextResponse.json({ error: '서버 오류가 발생했습니다' }, { status: 500 })
   }
 } 
