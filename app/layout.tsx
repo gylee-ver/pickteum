@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Script from 'next/script'
+import { ScrollButton } from "@/components/ui/scroll-button"
 
 const baseUrl = 'https://www.pickteum.com'
 
@@ -124,6 +125,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <ScrollButton />
       </body>
     </html>
   )

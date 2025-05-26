@@ -9,6 +9,7 @@ import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
+import { ScrollButton } from "@/components/ui/scroll-button"
 
 // 백업용 샘플 데이터 (API 로드 실패 시 사용)
 const FALLBACK_CONTENT = [
@@ -206,49 +207,25 @@ export default function ContentFeed() {
     return (
       <div className="mt-8 mb-8 text-center py-12">
         <p className="text-[#767676]">"{activeCategory}" 카테고리에 콘텐츠가 없습니다.</p>
+        <ScrollButton />
       </div>
     )
   }
 
   return (
-    <div className="mt-4 mb-8 space-y-4">
-      {displayedContent.map((item, index) => (
-        <ContentCard
-          key={`${item.id}-${index}`}
-          id={item.id}
-          title={item.title}
-          category={item.category}
-          thumbnail={item.thumbnail}
-          date={item.date}
-        />
-      ))}
-
-      {loading && (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="w-full py-3 px-4">
-              <div className="flex items-center justify-between mb-2">
-                <Skeleton className="h-5 w-16 rounded-full" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-              <Skeleton className="h-6 w-full mb-1" />
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="w-full aspect-video rounded-lg" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {hasMore && !loading && (
-        <div className="flex justify-center mt-6">
-          <Button
-            onClick={handleLoadMore}
-            className="bg-white text-[#333333] border border-[#FFC83D] hover:bg-[#FFF8E1]"
-          >
-            더보기
-          </Button>
-        </div>
-      )}
+    <div className="relative max-w-3xl mx-auto" data-content="main">
+      <div className="grid gap-4">
+        {displayedContent.map((item) => (
+          <ContentCard key={item.id} {...item} />
+        ))}
+        {loading && (
+          <>
+            <Skeleton className="h-[120px] w-full rounded-lg" />
+            <Skeleton className="h-[120px] w-full rounded-lg" />
+          </>
+        )}
+      </div>
+      <ScrollButton />
     </div>
   )
 }
