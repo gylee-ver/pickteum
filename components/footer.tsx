@@ -96,7 +96,7 @@ export default function Footer() {
               관리자 페이지
             </Link>
           </div>
-          <p className="text-xs text-[#767676] mb-2">(주)스튜디오시운 | 대표: 이건용 | 사업자등록번호: 506-24-52749</p>
+          <p className="text-xs text-[#767676] mb-2">스튜디오시운 | 대표: 이건용 | 사업자등록번호: 506-24-52749</p>
           <p className="text-xs text-[#767676] mb-2">서울특별시 금천구 범안로 1212, 31층</p>
           <p className="text-xs text-[#767676] mb-2">통신판매업 신고번호: 2025-서울금천-0961</p>
         </div>

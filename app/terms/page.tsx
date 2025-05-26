@@ -31,7 +31,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h3 className="text-lg font-semibold text-[#212121] mb-4">제1조 (목적)</h3>
               <p className="text-sm text-[#333333] leading-relaxed mb-4">
-                이 약관은 주식회사 픽틈(이하 "회사")이 제공하는 픽틈 서비스(이하 "서비스")의 이용조건 및 절차, 회사와 이용자 간의 권리, 의무, 책임사항과 기타 필요한 사항을 규정함을 목적으로 합니다.
+                이 약관은 스튜디오시운(이하 "회사")이 제공하는 픽틈 서비스(이하 "서비스")의 이용조건 및 절차, 회사와 이용자 간의 권리, 의무, 책임사항과 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </section>
 
