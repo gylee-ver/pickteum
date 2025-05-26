@@ -76,8 +76,13 @@ export default function ContentFeed() {
       let query = supabase
         .from('articles')
         .select(`
-          *,
-          categories:category_id (name, color)
+          id,
+          title,
+          thumbnail,
+          published_at,
+          created_at,
+          category_id,
+          categories!inner(name, color)
         `)
         .eq('status', 'published')
         .order('published_at', { ascending: false })
@@ -103,18 +108,36 @@ export default function ContentFeed() {
       console.log('로드된 아티클:', data)
       
       // 아티클 데이터 변환
-      const formattedData = data.map(article => ({
-        id: article.id,
-        title: article.title,
-        category: {
-          name: article.categories?.name || '미분류',
-          color: article.categories?.color || '#cccccc'
-        },
-        thumbnail: article.thumbnail || '/placeholder.svg',
-        date: article.published_at ? 
-          format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-          format(new Date(), 'yyyy.MM.dd', { locale: ko })
-      }))
+      const formattedData = data.map(article => {
+        // 안전한 썸네일 URL 처리
+        const getImageUrl = (thumbnail: string | null) => {
+          if (!thumbnail) return '/placeholder.svg'
+          
+          if (thumbnail.startsWith('http')) {
+            return thumbnail
+          }
+          
+          if (thumbnail.startsWith('/')) {
+            return `https://www.pickteum.com${thumbnail}`
+          }
+          
+          // Supabase 스토리지 경로로 가정
+          return `https://jpdjalmsoooztqvhuzyx.supabase.co/storage/v1/object/public/article-thumbnails/${thumbnail}`
+        }
+
+        return {
+          id: article.id,
+          title: article.title,
+          category: {
+            name: article.categories?.name || '미분류',
+            color: article.categories?.color || '#cccccc'
+          },
+          thumbnail: getImageUrl(article.thumbnail),
+          date: article.published_at ? 
+            format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
+            format(new Date(), 'yyyy.MM.dd', { locale: ko })
+        }
+      })
       
       if (page === 1) {
         setContent(formattedData)
