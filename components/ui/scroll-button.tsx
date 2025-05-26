@@ -7,25 +7,22 @@ import { cn } from "@/lib/utils"
 
 export function ScrollButton() {
   const [isBottom, setIsBottom] = React.useState(false)
-  const [rightPosition, setRightPosition] = React.useState("36px")
+  const [rightPosition, setRightPosition] = React.useState("32px")
 
-  // 콘텐츠 영역 기준으로 버튼 위치 계산
   const updateButtonPosition = React.useCallback(() => {
     const content = document.querySelector('[data-content="main"]')
     if (content) {
       const rect = content.getBoundingClientRect()
-      const rightOffset = window.innerWidth - (rect.right + 100)
+      const rightOffset = window.innerWidth - (rect.right + 90)
       setRightPosition(`${rightOffset}px`)
     }
   }, [])
 
   React.useEffect(() => {
     const handleScroll = () => {
-      // 페이지 하단 도달 여부 확인 로직 수정
       const scrollPosition = window.innerHeight + window.scrollY
       const documentHeight = document.documentElement.scrollHeight
-      // 여유값을 50px로 조정하여 더 정확하게 하단 도달 감지
-      const isAtBottom = scrollPosition >= documentHeight - 50
+      const isAtBottom = scrollPosition >= documentHeight - 10 // 거의 최하단에 도달했을 때
       setIsBottom(isAtBottom)
     }
 
@@ -44,7 +41,6 @@ export function ScrollButton() {
     window.addEventListener("scroll", throttledScroll, { passive: true })
     window.addEventListener("resize", throttledScroll, { passive: true })
 
-    // 초기 위치 설정
     updateButtonPosition()
     handleScroll()
 
@@ -62,9 +58,18 @@ export function ScrollButton() {
         behavior: "smooth"
       })
     } else {
-      // 맨 아래로 스크롤
+      // 강제로 최하단까지 스크롤
+      const maxScroll = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight,
+        document.body.clientHeight,
+        document.documentElement.clientHeight
+      )
+      
       window.scrollTo({
-        top: document.documentElement.scrollHeight,
+        top: maxScroll,
         behavior: "smooth"
       })
     }
@@ -76,14 +81,13 @@ export function ScrollButton() {
       size="icon"
       className={cn(
         "fixed z-[100] rounded-full shadow-md transition-all duration-300 hover:shadow-lg",
-        "bg-[#FFC83D] hover:bg-[#FFC83D]/90 border-none", // 노란색 배경으로 변경
+        "bg-[#FFC83D] hover:bg-[#FFC83D]/90 border-none",
         "bottom-20 hidden md:flex",
         isBottom ? "rotate-360" : ""
       )}
       style={{ right: rightPosition }}
       onClick={handleClick}
     >
-      {/* 아이콘 색상을 흰색으로 변경 */}
       {isBottom ? (
         <ArrowUp className="text-black" />
       ) : (
