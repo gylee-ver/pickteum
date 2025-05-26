@@ -75,6 +75,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* 🔥 모바일 최적화 메타태그 추가 (기존 UI 영향 없음) */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+        <meta name="format-detection" content="telephone=no, email=no, address=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        
         {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-8R9N5SG6WM"

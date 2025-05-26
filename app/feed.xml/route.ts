@@ -38,6 +38,11 @@ export async function GET() {
     <description>건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 콘텐츠를 제공하는 모바일 퍼스트 플랫폼</description>
     <link>${baseUrl}</link>
     <language>ko-KR</language>
+    <copyright>© 2025 픽틈. All rights reserved.</copyright>
+    <managingEditor>admin@pickteum.com (픽틈)</managingEditor>
+    <webMaster>admin@pickteum.com (픽틈)</webMaster>
+    <category>뉴스</category>
+    <generator>Next.js RSS Generator</generator>
     <lastBuildDate>${currentDate}</lastBuildDate>
     <pubDate>${currentDate}</pubDate>
     <ttl>60</ttl>
