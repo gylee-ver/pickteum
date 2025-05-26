@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'UmikrnCv44LHiK37WnbFGHjnqSYwTF6JJ',
-    naver: 'YOUR_NAVER_CODE',
+    naver: 'naver-site-verification=YOUR_CODE',
   },
   category: '뉴스',
 }
@@ -75,25 +75,22 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* Google Analytics 4 - 우선순위 높음 */}
+        {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-8R9N5SG6WM"
           strategy="afterInteractive"
-          priority
         />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-8R9N5SG6WM', {
-              page_title: document.title,
-              page_location: window.location.href
-            });
+
+            gtag('config', 'G-8R9N5SG6WM');
           `}
         </Script>
 
-        {/* Hotjar - 기존 설정 유지하는 것이 안전 */}
+        {/* Hotjar Tracking Code */}
         <Script id="hotjar" strategy="afterInteractive">
           {`
             (function(h,o,t,j,a,r){
@@ -108,21 +105,12 @@ export default function RootLayout({
         </Script>
         
         {/* 네이버 서치어드바이저 메타태그 */}
-        <meta name="naver-site-verification" content="UmikrnCv44LHiK37WnbFGHjnqSYwTF6JJ" />
+        <meta name="naver-site-verification" content="YOUR_CODE" />
         
         {/* 다음 서치어드바이저 메타태그 */}
-        <meta name="kakao-site-verification" content="YOUR_KAKAO_CODE" />
+        <meta name="kakao-site-verification" content="YOUR_CODE" />
       </head>
       <body>
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe 
-            src="https://www.googletagmanager.com/ns.html?id=GTM-MJSWS58K"
-            height="0" 
-            width="0" 
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
         {children}
       </body>
     </html>
