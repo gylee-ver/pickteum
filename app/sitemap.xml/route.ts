@@ -19,7 +19,7 @@ export async function GET() {
       .from('categories')
       .select('name')
 
-    const baseUrl = 'https://pickteum.com'
+    const baseUrl = 'https://www.pickteum.com'
     const currentDate = new Date().toISOString()
 
     // XML 생성
@@ -95,7 +95,7 @@ export async function GET() {
     const basicSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://pickteum.com</loc>
+    <loc>https://www.pickteum.com</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>

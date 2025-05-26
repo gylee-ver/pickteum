@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://pickteum.com'),
+  metadataBase: new URL('https://www.pickteum.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: '틈 날 땐? 픽틈!',
     description: '당신의 정크 타임을, 스마일 타임으로!',
-    url: 'https://pickteum.com',
+    url: 'https://www.pickteum.com',
     siteName: '픽틈',
     images: [
       {

@@ -9,18 +9,20 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+  },
   async redirects() {
     return [
       {
         source: '/:path*',
         has: [
           {
-            type: 'header',
-            key: 'x-forwarded-proto',
-            value: 'http',
+            type: 'host',
+            value: 'pickteum.com',
           },
         ],
-        destination: 'https://pickteum.com/:path*',
+        destination: 'https://www.pickteum.com/:path*',
         permanent: true,
       },
     ]
