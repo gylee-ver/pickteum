@@ -43,7 +43,7 @@ Disallow: /admin/
 Disallow: /api/
 
 # 다음 웹마스터도구 인증
-# 2^5Bj!Q8eDuJ
+#DaumWebMasterTool:c09f592f9c89412496325586937a6ea735b3d45e12a9d31f2467f9b2a429c057:Ra2k1kitr6u0odUiTWghlA==
 
 # 구글 모바일 친화성 테스트 봇
 User-agent: Chrome-Lighthouse
