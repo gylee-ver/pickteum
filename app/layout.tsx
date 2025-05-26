@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'UmikrnCv44LHiK37WnbFGHjnqSYwTF6JJ',
-    naver: 'naver-site-verification=YOUR_CODE',
+    naver: '42769cb438f20728e074ac6432888e234709d9af',
   },
   category: '뉴스',
 }
@@ -105,7 +105,7 @@ export default function RootLayout({
         </Script>
         
         {/* 네이버 서치어드바이저 메타태그 */}
-        <meta name="naver-site-verification" content="YOUR_CODE" />
+        <meta name="naver-site-verification" content="42769cb438f20728e074ac6432888e234709d9af" />
         
         {/* 다음 서치어드바이저 메타태그 */}
         <meta name="kakao-site-verification" content="YOUR_CODE" />
