@@ -21,19 +21,29 @@ User-agent: Googlebot-Image
 Allow: /public/
 Allow: /_next/image/*
 
-# 네이버 검색로봇
+# 구글 검색로봇 (Google Search Console)
+User-agent: Googlebot
+Allow: /
+Allow: /sitemap.xml
+Disallow: /admin/
+Disallow: /api/
+
+# 네이버 검색로봇 (네이버 서치어드바이저)
 User-agent: Yeti
 Allow: /
 Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /api/
 
-# 다음 검색로봇
+# 다음 검색로봇 (다음 웹마스터도구)
 User-agent: Daum
 Allow: /
 Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /api/
+
+# 다음 웹마스터도구 인증
+# DaumWebMasterTool:f0c667b2f8a2d06d06d6dc22dabc897ddb80a653ce73d8a35bc8baf4908f6613:Ra2k1kitr6u0odUiTWghlA==
 
 # 구글 모바일 친화성 테스트 봇
 User-agent: Chrome-Lighthouse
@@ -42,6 +52,16 @@ Allow: /
 # 구글 AdsBot
 User-agent: AdsBot-Google
 Allow: /
+
+# 빙 검색로봇
+User-agent: Bingbot
+Allow: /
+Allow: /sitemap.xml
+Disallow: /admin/
+Disallow: /api/
+
+# 크롤 딜레이 설정 (서버 부하 방지)
+Crawl-delay: 1
 `
 
   return new NextResponse(robotsTxt, {
