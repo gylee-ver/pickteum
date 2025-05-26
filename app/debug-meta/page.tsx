@@ -1,18 +1,18 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: '메타데이터 테스트 | 픽틈',
-  description: '이것은 OG 메타데이터 테스트 페이지입니다.',
+  title: '메타데이터 테스트',
+  description: '틈새 시간을, 이슈 충전 타임으로! 이것은 OG 메타데이터 테스트 페이지입니다.',
   openGraph: {
     title: '메타데이터 테스트',
-    description: '이것은 OG 메타데이터 테스트 페이지입니다.',
+    description: '틈새 시간을, 이슈 충전 타임으로! 이것은 OG 메타데이터 테스트 페이지입니다.',
     type: 'article',
     images: [
       {
         url: 'https://www.pickteum.com/pickteum_og.png',
         width: 1200,
         height: 630,
-        alt: '픽틈 로고',
+        alt: '틈 날 땐? 픽틈!',
       },
     ],
     url: 'https://www.pickteum.com/debug-meta',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '메타데이터 테스트',
-    description: '이것은 OG 메타데이터 테스트 페이지입니다.',
+    description: '틈새 시간을, 이슈 충전 타임으로! 이것은 OG 메타데이터 테스트 페이지입니다.',
     images: ['https://www.pickteum.com/pickteum_og.png'],
   },
 }

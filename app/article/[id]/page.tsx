@@ -36,18 +36,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (error || !article) {
       // 에러시에도 기본 메타데이터 반환
       return {
-        title: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
+        title: '틈 날 땐? 픽틈!',
         description: '요청하신 콘텐츠를 찾을 수 없습니다.',
         openGraph: {
-          title: '픽틈',
-          description: '당신의 정크 타임을, 스마일 타임으로!',
+          title: '틈 날 땐? 픽틈!',
+          description: '틈새 시간을, 이슈 충전 타임으로!',
           type: 'website',
           images: [
             {
               url: 'https://www.pickteum.com/pickteum_og.png',
               width: 1200,
               height: 630,
-              alt: '픽틈',
+              alt: '틈 날 땐? 픽틈!',
             },
           ],
           url: 'https://www.pickteum.com',
@@ -141,18 +141,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch (error) {
     // 치명적 오류시에도 기본 메타데이터 반환 (절대 실패하지 않음)
     return {
-      title: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
-      description: '유익한 콘텐츠를 제공하는 픽틈입니다.',
+      title: '틈 날 땐? 픽틈!',
+      description: '틈새 시간을, 이슈 충전 타임으로!',
       openGraph: {
-        title: '픽틈',
-        description: '당신의 정크 타임을, 스마일 타임으로!',
+        title: '틈 날 땐? 픽틈!',
+        description: '틈새 시간을, 이슈 충전 타임으로!',
         type: 'website',
         images: [
           {
             url: 'https://www.pickteum.com/pickteum_og.png',
             width: 1200,
             height: 630,
-            alt: '픽틈',
+            alt: '틈 날 땐? 픽틈!',
           },
         ],
         url: 'https://www.pickteum.com',

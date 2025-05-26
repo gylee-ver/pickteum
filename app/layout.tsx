@@ -6,14 +6,14 @@ const baseUrl = 'https://www.pickteum.com'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | 픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
-    default: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!'
+    template: '%s | 틈 날 땐? 픽틈!',
+    default: '틈 날 땐? 픽틈!'
   },
-  description: '건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 최신 뉴스와 유익한 콘텐츠를 제공하는 모바일 퍼스트 플랫폼입니다.',
+  description: '틈새 시간을, 이슈 충전 타임으로!',
   generator: 'Next.js',
   applicationName: '픽틈',
   referrer: 'origin-when-cross-origin',
-  keywords: ['픽틈', 'pickteum', '뉴스', '정크타임', '스마일타임', '콘텐츠', '정보', '건강', '스포츠', '경제', '정치', '라이프', '테크'],
+  keywords: ['픽틈', 'pickteum', '뉴스', '틈새시간', '이슈충전', '콘텐츠', '정보', '건강', '스포츠', '경제', '정치', '라이프', '테크'],
   authors: [{ name: '픽틈' }],
   creator: '픽틈',
   publisher: '픽틈',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '틈 날 땐? 픽틈!',
-    description: '당신의 정크 타임을, 스마일 타임으로!',
+    description: '틈새 시간을, 이슈 충전 타임으로!',
     url: baseUrl,
     siteName: '픽틈',
     images: [
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
         url: '/pickteum_og.png',
         width: 1200,
         height: 630,
-        alt: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
+        alt: '틈 날 땐? 픽틈!',
       },
     ],
     locale: 'ko_KR',

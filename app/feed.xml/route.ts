@@ -60,9 +60,9 @@ ${enclosureTag}
     const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>픽틈 - 당신의 정크 타임을, 스마일 타임으로!</title>
+    <title>틈 날 땐? 픽틈!</title>
     <link>${baseUrl}</link>
-    <description>건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 콘텐츠를 제공하는 모바일 퍼스트 플랫폼</description>
+    <description>틈새 시간을, 이슈 충전 타임으로! 건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 콘텐츠를 제공하는 모바일 퍼스트 플랫폼</description>
     <language>ko-KR</language>
     <copyright>© 2025 픽틈. All rights reserved.</copyright>
     <managingEditor>admin@pickteum.com (픽틈)</managingEditor>
@@ -74,7 +74,7 @@ ${enclosureTag}
     <ttl>60</ttl>
     <image>
       <url>${baseUrl}/pickteum_og.png</url>
-      <title>픽틈</title>
+      <title>틈 날 땐? 픽틈!</title>
       <link>${baseUrl}</link>
       <width>1200</width>
       <height>630</height>
@@ -97,9 +97,9 @@ ${items}
     const basicRss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>픽틈</title>
+    <title>틈 날 땐? 픽틈!</title>
     <link>https://www.pickteum.com</link>
-    <description>당신의 정크 타임을, 스마일 타임으로!</description>
+    <description>틈새 시간을, 이슈 충전 타임으로!</description>
     <language>ko-KR</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
   </channel>

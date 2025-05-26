@@ -35,7 +35,7 @@ export function generateWebsiteSchema() {
     "name": "픽틈",
     "alternateName": "Pickteum",
     "url": "https://www.pickteum.com",
-    "description": "당신의 정크 타임을, 스마일 타임으로!",
+    "description": "틈새 시간을, 이슈 충전 타임으로!",
     "inLanguage": "ko-KR",
     "potentialAction": {
       "@type": "SearchAction",
@@ -73,9 +73,9 @@ export function generateOrganizationSchema() {
       "width": 1200,
       "height": 630
     },
-    "description": "당신의 정크 타임을, 스마일 타임으로! 건강, 스포츠, 정치/시사, 경제, 라이프, 테크 등 다양한 콘텐츠를 제공합니다.",
+    "description": "틈새 시간을, 이슈 충전 타임으로! 건강, 스포츠, 정치/시사, 경제, 라이프, 테크 등 다양한 콘텐츠를 제공합니다.",
     "foundingDate": "2025",
-    "slogan": "당신의 정크 타임을, 스마일 타임으로!",
+    "slogan": "틈새 시간을, 이슈 충전 타임으로!",
     "knowsAbout": [
       "뉴스",
       "건강",
@@ -192,7 +192,7 @@ export function generateFAQSchema() {
         "name": "픽틈이란 무엇인가요?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "픽틈은 '당신의 정크 타임을, 스마일 타임으로!'를 슬로건으로 하는 콘텐츠 플랫폼입니다. 건강, 스포츠, 정치/시사, 경제, 라이프, 테크 등 다양한 분야의 유익한 콘텐츠를 제공합니다."
+          "text": "픽틈은 '틈새 시간을, 이슈 충전 타임으로!'를 슬로건으로 하는 콘텐츠 플랫폼입니다. 건강, 스포츠, 정치/시사, 경제, 라이프, 테크 등 다양한 분야의 유익한 콘텐츠를 제공합니다."
         }
       },
       {

@@ -13,11 +13,11 @@ export async function generateMetadata({ params }: { params: { name: string } })
   const categoryName = decodeURIComponent(params.name)
   
   return {
-    title: `${categoryName} - 픽틈`,
-    description: `픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요. 양질의 ${categoryName} 관련 정보를 제공합니다.`,
+    title: `${categoryName}`,
+    description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
     openGraph: {
-      title: `${categoryName} - 픽틈`,
-      description: `픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+      title: `${categoryName} - 틈 날 땐? 픽틈!`,
+      description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
       type: 'website',
     },
   }
