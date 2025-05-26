@@ -55,7 +55,6 @@ export default async function CategoryPage({ params }: { params: { name: string 
       .limit(20)
 
     if (articlesError) {
-      console.error('아티클 조회 오류:', articlesError)
       notFound()
     }
 
@@ -77,8 +76,8 @@ export default async function CategoryPage({ params }: { params: { name: string 
     // 🔥 구조화된 데이터 생성
     const categoryCollectionSchema = generateCategoryCollectionSchema(category, articles || [])
     const breadcrumbSchema = generateBreadcrumbSchema([
-      { name: "홈", url: "https://pickteum.com" },
-      { name: categoryName, url: `https://pickteum.com/category/${categoryName.toLowerCase()}` }
+      { name: "홈", url: "https://www.pickteum.com" },
+      { name: categoryName, url: `https://www.pickteum.com/category/${categoryName.toLowerCase()}` }
     ])
 
     return (
@@ -142,8 +141,8 @@ export default async function CategoryPage({ params }: { params: { name: string 
         </div>
       </>
     )
+
   } catch (error) {
-    console.error('카테고리 페이지 오류:', error)
     notFound()
   }
 } 

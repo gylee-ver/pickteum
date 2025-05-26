@@ -11,7 +11,7 @@ export default function Home() {
   const organizationSchema = generateOrganizationSchema()
   const faqSchema = generateFAQSchema()
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: "홈", url: "https://pickteum.com" }
+    { name: "홈", url: "https://www.pickteum.com" }
   ])
 
   return (

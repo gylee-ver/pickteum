@@ -2,16 +2,18 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Script from 'next/script'
 
+const baseUrl = 'https://www.pickteum.com'
+
 export const metadata: Metadata = {
   title: {
-    template: '%s | 틈 날 땐? 픽틈!',
-    default: '틈 날 땐? 픽틈!'
+    template: '%s | 픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
+    default: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!'
   },
-  description: '당신의 정크 타임을, 스마일 타임으로!',
+  description: '건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 최신 뉴스와 유익한 콘텐츠를 제공하는 모바일 퍼스트 플랫폼입니다.',
   generator: 'Next.js',
   applicationName: '픽틈',
   referrer: 'origin-when-cross-origin',
-  keywords: ['픽틈', '뉴스', '정크타임', '스마일타임', '콘텐츠', '정보'],
+  keywords: ['픽틈', 'pickteum', '뉴스', '정크타임', '스마일타임', '콘텐츠', '정보', '건강', '스포츠', '경제', '정치', '라이프', '테크'],
   authors: [{ name: '픽틈' }],
   creator: '픽틈',
   publisher: '픽틈',
@@ -20,14 +22,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://www.pickteum.com'),
+  metadataBase: new URL(baseUrl),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: '틈 날 땐? 픽틈!',
     description: '당신의 정크 타임을, 스마일 타임으로!',
-    url: 'https://www.pickteum.com',
+    url: baseUrl,
     siteName: '픽틈',
     images: [
       {
@@ -75,12 +77,18 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* 🔥 모바일 최적화 메타태그 추가 (기존 UI 영향 없음) */}
+        {/* 🔥 모바일 최적화 메타태그 (중복 제거 및 통합) */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        
+        {/* 🔧 성능 최적화 메타태그 */}
+        <meta name="theme-color" content="#F2FF66" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         
         {/* Google Analytics 4 */}
         <Script
@@ -113,9 +121,6 @@ export default function RootLayout({
         
         {/* 네이버 서치어드바이저 메타태그 */}
         <meta name="naver-site-verification" content="42769cb438f20728e074ac6432888e234709d9af" />
-        
-        {/* 다음 서치어드바이저 메타태그 */}
-        <meta name="kakao-site-verification" content="YOUR_CODE" />
       </head>
       <body>
         {children}

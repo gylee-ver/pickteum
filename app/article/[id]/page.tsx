@@ -11,8 +11,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   try {
     const { id } = await params
     
-    console.log('=== generateMetadata 시작 ===', id)
-    
     // 가장 안전한 쿼리 (조인 없이)
     const { data: article, error } = await supabase
       .from('articles')
@@ -35,16 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .eq('status', 'published')
       .single()
 
-    console.log('generateMetadata 1차 쿼리 결과:', {
-      found: !!article,
-      error: error?.message,
-      articleId: article?.id,
-      title: article?.title?.substring(0, 50),
-      thumbnail: article?.thumbnail
-    })
-
     if (error || !article) {
-      console.log('아티클을 찾을 수 없음:', error?.message)
       // 에러시에도 기본 메타데이터 반환
       return {
         title: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
@@ -55,13 +44,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
           type: 'website',
           images: [
             {
-              url: 'https://pickteum.com/pickteum_og.png',
+              url: 'https://www.pickteum.com/pickteum_og.png',
               width: 1200,
               height: 630,
               alt: '픽틈',
             },
           ],
-          url: 'https://pickteum.com',
+          url: 'https://www.pickteum.com',
           siteName: '픽틈',
           locale: 'ko_KR',
         },
@@ -83,7 +72,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         }
       }
     } catch (catError) {
-      console.log('카테고리 조회 실패 (무시):', catError)
+      // 카테고리 조회 실패는 무시
     }
 
     // 안전한 메타데이터 구성
@@ -93,27 +82,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       '픽틈에서 제공하는 유익한 콘텐츠입니다.').trim()
     
     // 안전한 이미지 URL 처리
-    let imageUrl = 'https://pickteum.com/pickteum_og.png'
+    let imageUrl = 'https://www.pickteum.com/pickteum_og.png'
     try {
       if (article.thumbnail && typeof article.thumbnail === 'string') {
         if (article.thumbnail.startsWith('http')) {
           imageUrl = article.thumbnail
         } else if (article.thumbnail.startsWith('/')) {
-          imageUrl = `https://pickteum.com${article.thumbnail}`
+          imageUrl = `https://www.pickteum.com${article.thumbnail}`
         } else {
-          imageUrl = `https://pickteum.com/${article.thumbnail}`
+          imageUrl = `https://www.pickteum.com/${article.thumbnail}`
         }
       }
     } catch (imgError) {
-      console.log('이미지 URL 처리 오류 (기본값 사용):', imgError)
+      // 이미지 URL 처리 오류 시 기본값 사용
     }
-
-    console.log('generateMetadata 처리된 데이터:', {
-      title: title.substring(0, 50),
-      description: description.substring(0, 50),
-      imageUrl,
-      categoryName
-    })
 
     const metadata: Metadata = {
       title: `${title} | 픽틈`,
@@ -137,7 +119,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             alt: title,
           },
         ],
-        url: `https://pickteum.com/article/${id}`,
+        url: `https://www.pickteum.com/article/${id}`,
         siteName: '픽틈',
         locale: 'ko_KR',
       },
@@ -150,16 +132,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         site: '@pickteum',
       },
       alternates: {
-        canonical: `https://pickteum.com/article/${article.slug || id}`,
+        canonical: `https://www.pickteum.com/article/${article.slug || id}`,
       },
     }
 
-    console.log('=== generateMetadata 성공 완료 ===')
     return metadata
 
   } catch (error) {
-    console.error('generateMetadata 치명적 오류:', error)
-    
     // 치명적 오류시에도 기본 메타데이터 반환 (절대 실패하지 않음)
     return {
       title: '픽틈 - 당신의 정크 타임을, 스마일 타임으로!',
@@ -170,13 +149,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         type: 'website',
         images: [
           {
-            url: 'https://pickteum.com/pickteum_og.png',
+            url: 'https://www.pickteum.com/pickteum_og.png',
             width: 1200,
             height: 630,
             alt: '픽틈',
           },
         ],
-        url: 'https://pickteum.com',
+        url: 'https://www.pickteum.com',
         siteName: '픽틈',
         locale: 'ko_KR',
       },
@@ -214,7 +193,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       .single()
 
     if (error || !article) {
-      console.log('ArticlePage: 아티클을 찾을 수 없음:', error?.message)
       notFound()
     }
 
@@ -226,7 +204,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     )
 
   } catch (error) {
-    console.error('ArticlePage 오류:', error)
     notFound()
   }
 }

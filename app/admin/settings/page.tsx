@@ -36,7 +36,7 @@ const MOCK_SETTINGS = {
   general: {
     siteName: "Pickteum(픽틈)",
     siteDescription: "모바일 퍼스트 콘텐츠 플랫폼",
-    siteUrl: "https://pickteum.com",
+    siteUrl: "https://www.pickteum.com",
     adminEmail: "admin@pickteum.com",
     logoUrl: "/logo.png",
     faviconUrl: "/favicon.ico",

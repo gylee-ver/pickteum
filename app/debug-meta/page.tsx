@@ -9,20 +9,20 @@ export const metadata: Metadata = {
     type: 'article',
     images: [
       {
-        url: 'https://pickteum.com/pickteum_og.png',
+        url: 'https://www.pickteum.com/pickteum_og.png',
         width: 1200,
         height: 630,
         alt: '픽틈 로고',
       },
     ],
-    url: 'https://pickteum.com/debug-meta',
+    url: 'https://www.pickteum.com/debug-meta',
     siteName: '픽틈',
   },
   twitter: {
     card: 'summary_large_image',
     title: '메타데이터 테스트',
     description: '이것은 OG 메타데이터 테스트 페이지입니다.',
-    images: ['https://pickteum.com/pickteum_og.png'],
+    images: ['https://www.pickteum.com/pickteum_og.png'],
   },
 }
 
@@ -35,8 +35,8 @@ export default function DebugMetaPage() {
       <ul style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto' }}>
         <li>&lt;meta property="og:title" content="메타데이터 테스트"&gt;</li>
         <li>&lt;meta property="og:description" content="..."&gt;</li>
-        <li>&lt;meta property="og:image" content="https://pickteum.com/pickteum_og.png"&gt;</li>
-        <li>&lt;meta property="og:url" content="https://pickteum.com/debug-meta"&gt;</li>
+        <li>&lt;meta property="og:image" content="https://www.pickteum.com/pickteum_og.png"&gt;</li>
+        <li>&lt;meta property="og:url" content="https://www.pickteum.com/debug-meta"&gt;</li>
       </ul>
       <br />
       <a href="/" style={{ color: 'blue' }}>홈으로 돌아가기</a>

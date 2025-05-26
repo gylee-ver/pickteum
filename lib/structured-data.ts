@@ -34,24 +34,24 @@ export function generateWebsiteSchema() {
     "@type": "WebSite",
     "name": "픽틈",
     "alternateName": "Pickteum",
-    "url": "https://pickteum.com",
+    "url": "https://www.pickteum.com",
     "description": "당신의 정크 타임을, 스마일 타임으로!",
     "inLanguage": "ko-KR",
     "potentialAction": {
       "@type": "SearchAction",
       "target": {
         "@type": "EntryPoint",
-        "urlTemplate": "https://pickteum.com/search?q={search_term_string}"
+        "urlTemplate": "https://www.pickteum.com/search?q={search_term_string}"
       },
       "query-input": "required name=search_term_string"
     },
     "publisher": {
       "@type": "Organization",
       "name": "픽틈",
-      "url": "https://pickteum.com",
+      "url": "https://www.pickteum.com",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://pickteum.com/pickteum_og.png",
+        "url": "https://www.pickteum.com/pickteum_og.png",
         "width": 1200,
         "height": 630
       }
@@ -66,10 +66,10 @@ export function generateOrganizationSchema() {
     "@type": "Organization",
     "name": "픽틈",
     "alternateName": "Pickteum",
-    "url": "https://pickteum.com",
+    "url": "https://www.pickteum.com",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://pickteum.com/pickteum_og.png",
+      "url": "https://www.pickteum.com/pickteum_og.png",
       "width": 1200,
       "height": 630
     },
@@ -88,7 +88,7 @@ export function generateOrganizationSchema() {
     ],
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": "https://pickteum.com"
+      "@id": "https://www.pickteum.com"
     }
   }
 }
@@ -110,16 +110,16 @@ export function generateArticleSchema(article: Article) {
       "name": "픽틈",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://pickteum.com/pickteum_og.png"
+        "url": "https://www.pickteum.com/pickteum_og.png"
       }
     },
     "datePublished": article.published_at || article.created_at,
     "dateModified": article.updated_at,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://pickteum.com/article/${article.slug}`
+      "@id": `https://www.pickteum.com/article/${article.slug}`
     },
-    "url": `https://pickteum.com/article/${article.slug}`,
+    "url": `https://www.pickteum.com/article/${article.slug}`,
     "articleSection": article.category?.name || '미분류',
     "keywords": article.tags?.join(', ') || '',
     "wordCount": article.content ? article.content.replace(/<[^>]*>/g, '').length : 0,
@@ -138,7 +138,7 @@ export function generateCategoryCollectionSchema(category: Category, articles: A
     "@type": "CollectionPage",
     "name": `${category.name} - 픽틈`,
     "description": `픽틈의 ${category.name} 카테고리 콘텐츠 모음`,
-    "url": `https://pickteum.com/category/${category.name.toLowerCase()}`,
+    "url": `https://www.pickteum.com/category/${category.name.toLowerCase()}`,
     "mainEntity": {
       "@type": "ItemList",
       "name": `${category.name} 아티클 목록`,
@@ -149,7 +149,7 @@ export function generateCategoryCollectionSchema(category: Category, articles: A
         "item": {
           "@type": "NewsArticle",
           "headline": article.title,
-          "url": `https://pickteum.com/article/${article.slug}`,
+          "url": `https://www.pickteum.com/article/${article.slug}`,
           "image": article.thumbnail || '/pickteum_og.png',
           "datePublished": article.published_at || article.created_at,
           "author": {
@@ -162,7 +162,7 @@ export function generateCategoryCollectionSchema(category: Category, articles: A
     "isPartOf": {
       "@type": "WebSite",
       "name": "픽틈",
-      "url": "https://pickteum.com"
+      "url": "https://www.pickteum.com"
     }
   }
 }
@@ -229,7 +229,7 @@ export function generateSitemapSchema(articles: Article[]) {
       "item": {
         "@type": "NewsArticle",
         "headline": article.title,
-        "url": `https://pickteum.com/article/${article.slug}`,
+        "url": `https://www.pickteum.com/article/${article.slug}`,
         "image": article.thumbnail || '/pickteum_og.png',
         "datePublished": article.published_at || article.created_at,
         "author": {
