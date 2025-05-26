@@ -43,7 +43,7 @@ export default function NewPostPage() {
   const [seoDescription, setSeoDescription] = useState("")
   const [tags, setTags] = useState("")
   const [slug, setSlug] = useState("")
-  const [author, setAuthor] = useState("pickteum1")
+  const [author, setAuthor] = useState("픽틈 스포츠이슈팀")
   const [status, setStatus] = useState("published")
   const [isPublished, setIsPublished] = useState(false)
   const [publishDate, setPublishDate] = useState<Date | undefined>(new Date())
@@ -574,7 +574,7 @@ export default function NewPostPage() {
         title: title.trim(),
         content: content.trim(),
         category_id: categoryId,
-        author: author || 'pickteum1',
+        author: author || '픽틈 스포츠이슈팀',
         slug: uniqueSlug,
         status: publish ? 'published' : 'draft',
         thumbnail: thumbnailUrl,
@@ -824,7 +824,7 @@ export default function NewPostPage() {
         title: title.trim(),
         content: content.trim(),
         category_id: categoryId,
-        author: author || 'pickteum1',
+        author: author || '픽틈 스포츠이슈팀',
         slug: uniqueSlug,
         status: 'scheduled',
         thumbnail: thumbnailUrl,
@@ -1261,8 +1261,11 @@ export default function NewPostPage() {
                     <SelectValue placeholder="작성자 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pickteum1">pickteum1</SelectItem>
-                    <SelectItem value="pickteum2">pickteum2</SelectItem>
+                    <SelectItem value="픽틈 스포츠이슈팀">픽틈 스포츠이슈팀</SelectItem>
+                    <SelectItem value="픽틈 정치·시사팀">픽틈 정치·시사팀</SelectItem>
+                    <SelectItem value="픽틈 경제·산업팀">픽틈 경제·산업팀</SelectItem>
+                    <SelectItem value="픽틈 헬스·라이프팀">픽틈 헬스·라이프팀</SelectItem>
+                    <SelectItem value="픽틈 IT·테크팀">픽틈 IT·테크팀</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

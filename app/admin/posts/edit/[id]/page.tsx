@@ -70,7 +70,7 @@ export default function EditPostPage() {
   const [seoDescription, setSeoDescription] = useState("")
   const [tags, setTags] = useState("")
   const [slug, setSlug] = useState("")
-  const [author, setAuthor] = useState("pickteum1")
+  const [author, setAuthor] = useState("픽틈 스포츠이슈팀")
   const [status, setStatus] = useState("published")
   const [isPublished, setIsPublished] = useState(false)
   const [publishDate, setPublishDate] = useState<Date | undefined>(new Date())
@@ -141,7 +141,7 @@ export default function EditPostPage() {
         setSeoDescription(articleData.seo_description || "")
         setTags(articleData.tags ? articleData.tags.join(', ') : "")
         setSlug(articleData.slug || "")
-        setAuthor(articleData.author || "pickteum1")
+        setAuthor(articleData.author || "픽틈 스포츠이슈팀")
         setStatus(articleData.status || "published")
         setThumbnail(articleData.thumbnail)
         
@@ -506,7 +506,7 @@ export default function EditPostPage() {
         title: title.trim(),
         content: content.trim(),
         category_id: categoryId,
-        author: author || originalArticle.author,
+        author: author || originalArticle.author || '픽틈 스포츠이슈팀',
         slug: slug || title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
         status: forceStatus || (publish ? 'published' : status),
         thumbnail: thumbnailUrl,
@@ -940,8 +940,11 @@ export default function EditPostPage() {
                     <SelectValue placeholder="작성자 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pickteum1">pickteum1</SelectItem>
-                    <SelectItem value="pickteum2">pickteum2</SelectItem>
+                    <SelectItem value="픽틈 스포츠이슈팀">픽틈 스포츠이슈팀</SelectItem>
+                    <SelectItem value="픽틈 정치·시사팀">픽틈 정치·시사팀</SelectItem>
+                    <SelectItem value="픽틈 경제·산업팀">픽틈 경제·산업팀</SelectItem>
+                    <SelectItem value="픽틈 헬스·라이프팀">픽틈 헬스·라이프팀</SelectItem>
+                    <SelectItem value="픽틈 IT·테크팀">픽틈 IT·테크팀</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
