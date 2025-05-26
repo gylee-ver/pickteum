@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export function ScrollButton() {
+  const pathname = usePathname()
   const [isBottom, setIsBottom] = React.useState(false)
   const [rightPosition, setRightPosition] = React.useState("32px")
 
@@ -13,16 +15,19 @@ export function ScrollButton() {
     const content = document.querySelector('[data-content="main"]')
     if (content) {
       const rect = content.getBoundingClientRect()
-      const rightOffset = window.innerWidth - (rect.right + 90)
+      const rightOffset = window.innerWidth - (rect.right + 100)
       setRightPosition(`${rightOffset}px`)
     }
   }, [])
 
   React.useEffect(() => {
+    // 메인 페이지가 아니면 이벤트 리스너를 등록하지 않음
+    if (pathname !== '/') return
+
     const handleScroll = () => {
       const scrollPosition = window.innerHeight + window.scrollY
       const documentHeight = document.documentElement.scrollHeight
-      const isAtBottom = scrollPosition >= documentHeight - 10 // 거의 최하단에 도달했을 때
+      const isAtBottom = scrollPosition >= documentHeight - 10
       setIsBottom(isAtBottom)
     }
 
@@ -48,17 +53,15 @@ export function ScrollButton() {
       window.removeEventListener("scroll", throttledScroll)
       window.removeEventListener("resize", throttledScroll)
     }
-  }, [updateButtonPosition])
+  }, [updateButtonPosition, pathname])
 
   const handleClick = () => {
     if (isBottom) {
-      // 맨 위로 스크롤
       window.scrollTo({
         top: 0,
         behavior: "smooth"
       })
     } else {
-      // 강제로 최하단까지 스크롤
       const maxScroll = Math.max(
         document.body.scrollHeight,
         document.documentElement.scrollHeight,
@@ -73,6 +76,11 @@ export function ScrollButton() {
         behavior: "smooth"
       })
     }
+  }
+
+  // 메인 페이지가 아니면 렌더링하지 않음 (모든 훅 호출 후)
+  if (pathname !== '/') {
+    return null
   }
 
   return (
