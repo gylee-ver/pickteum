@@ -60,6 +60,15 @@ export default function PickteumTracker({
         content_depth: isHomePage ? 'homepage' : (articleId ? 'article' : 'category')
       })
 
+      // 디버그용 로그
+      console.log('GA4 Event Sent:', {
+        event: 'page_view',
+        article_id: articleId || 'homepage',
+        category_name: categoryName || (isHomePage ? 'homepage' : 'other'),
+        traffic_source_detail: trafficSourceDetail,
+        content_depth: isHomePage ? 'homepage' : (articleId ? 'article' : 'category')
+      })
+
       // 🔥 북극성 지표: 월간 순 방문자 추적
       window.gtag('event', 'monthly_unique_visitor', {
         traffic_source: trafficSource,
