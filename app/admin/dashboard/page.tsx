@@ -38,6 +38,16 @@ interface RecentActivity {
   article_id?: string
 }
 
+// 인기 콘텐츠 타입 정의
+interface PopularContent {
+  id: string
+  title: string
+  views: number
+  category: string
+  categoryColor: string
+  published_at: string
+}
+
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const MOCK_ANALYTICS = {
   today: {
@@ -52,18 +62,6 @@ const MOCK_ANALYTICS = {
       bounceRate: -3,
     },
   },
-  topContent: [
-    { title: "건강한 식습관으로 면역력 높이는 7가지 방법", views: 542, avgTime: "3:21", category: "건강" },
-    { title: "2025 프로야구 시즌 전망: 주목해야 할 신인 선수들", views: 423, avgTime: "2:45", category: "스포츠" },
-    { title: "글로벌 경제 불확실성 속 투자 전략", views: 387, avgTime: "4:12", category: "경제" },
-    { title: "최신 인공지능 기술이 바꾸는 일상생활", views: 356, avgTime: "3:05", category: "테크" },
-    {
-      title: "정부, 신규 주택 공급 정책 발표... 부동산 시장 영향은?",
-      views: 298,
-      avgTime: "2:58",
-      category: "정치/시사",
-    },
-  ],
   categoryData: [
     { name: "건강", value: 35 },
     { name: "스포츠", value: 25 },
@@ -198,11 +196,52 @@ function ActivityBadge({ type }: { type: string }) {
 
 export default function DashboardPage() {
   const [userName, setUserName] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [drafts, setDrafts] = useState<any[]>([])
   const [scheduled, setScheduled] = useState<any[]>([])
+  const [popularContent, setPopularContent] = useState<PopularContent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+
+  // 인기 콘텐츠 로드 함수 추가
+  const loadPopularContent = async () => {
+    try {
+      const { data: articles, error } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          views,
+          published_at,
+          category:categories(
+            name,
+            color
+          )
+        `)
+        .eq('status', 'published')
+        .order('views', { ascending: false })
+        .limit(5)
+
+      if (error) {
+        logger.error('인기 콘텐츠 로드 오류:', error)
+        return
+      }
+
+      const formattedContent: PopularContent[] = (articles || []).map(article => ({
+        id: article.id,
+        title: article.title,
+        views: article.views || 0,
+        category: article.category?.name || '미분류',
+        categoryColor: article.category?.color || '#cccccc',
+        published_at: article.published_at
+      }))
+
+      setPopularContent(formattedContent)
+      
+    } catch (err) {
+      logger.error('인기 콘텐츠 로드 중 예외:', err)
+    }
+  }
 
   // 실제 데이터 로드 함수들
   const loadRecentActivity = async () => {
@@ -319,7 +358,8 @@ export default function DashboardPage() {
       setIsLoading(true)
       await Promise.all([
         loadRecentActivity(),
-        loadDraftsAndScheduled()
+        loadDraftsAndScheduled(),
+        loadPopularContent()
       ])
       setIsLoading(false)
     }
@@ -332,6 +372,11 @@ export default function DashboardPage() {
     router.push(`/admin/posts/edit/${articleId}`)
   }
 
+  // 아티클 보기 페이지로 이동
+  const handleViewArticle = (articleId: string) => {
+    window.open(`/article/${articleId}`, '_blank')
+  }
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -342,60 +387,59 @@ export default function DashboardPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">대시보드</h1>
-          <p className="text-sm text-gray-500">오늘의 통계와 콘텐츠 현황을 확인하세요.</p>
+      <div className="space-y-6">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#212121]">대시보드</h1>
+            <p className="text-[#767676]">안녕하세요, {userName}님! 📊</p>
+          </div>
+          <Button onClick={() => router.push("/admin/posts/new")} className="bg-[#FFC83D] hover:bg-[#FFB800]">
+            <Plus className="mr-2 h-4 w-4" />새 글 작성
+          </Button>
         </div>
-        <Button
-          className="bg-[#FFC83D] hover:bg-[#FFB800] shadow-sm transition-all"
-          onClick={() => router.push("/admin/posts/new")}
-        >
-          <Plus className="mr-2 h-4 w-4" /> 새 아티클 작성
-        </Button>
-      </div>
 
-      {/* 퀵 액션 패널 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard
-          title="방문자"
-          value={MOCK_ANALYTICS.today.visitors.toLocaleString()}
-          change={MOCK_ANALYTICS.today.change.visitors}
-          icon={Users}
-          trend="up"
-        />
-        <StatCard
-          title="페이지뷰"
-          value={MOCK_ANALYTICS.today.pageviews.toLocaleString()}
-          change={MOCK_ANALYTICS.today.change.pageviews}
-          icon={FileText}
-          trend="up"
-        />
-        <StatCard
-          title="평균 체류시간"
-          value={MOCK_ANALYTICS.today.avgTime}
-          change={MOCK_ANALYTICS.today.change.avgTime}
-          icon={Clock}
-          trend="up"
-        />
-        <StatCard
-          title="이탈률"
-          value={MOCK_ANALYTICS.today.bounceRate}
-          change={Math.abs(MOCK_ANALYTICS.today.change.bounceRate)}
-          icon={BarChart3}
-          trend="down"
-        />
-      </div>
+        {/* 통계 카드 */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="오늘 방문자"
+            value={MOCK_ANALYTICS.today.visitors.toLocaleString()}
+            change={MOCK_ANALYTICS.today.change.visitors}
+            icon={Users}
+            trend="up"
+          />
+          <StatCard
+            title="페이지뷰"
+            value={MOCK_ANALYTICS.today.pageviews.toLocaleString()}
+            change={MOCK_ANALYTICS.today.change.pageviews}
+            icon={BarChart3}
+            trend="up"
+          />
+          <StatCard
+            title="평균 체류시간"
+            value={MOCK_ANALYTICS.today.avgTime}
+            change={MOCK_ANALYTICS.today.change.avgTime}
+            icon={Clock}
+            trend="up"
+          />
+          <StatCard
+            title="이탈률"
+            value={MOCK_ANALYTICS.today.bounceRate}
+            change={MOCK_ANALYTICS.today.change.bounceRate}
+            icon={TrendingDown}
+            trend="down"
+          />
+        </div>
 
-      <div className="grid gap-6 mb-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-          {/* 주간 트렌드 차트 */}
+        {/* 차트 섹션 */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          {/* 방문자 추이 차트 */}
           <Card className="lg:col-span-4 overflow-hidden transition-all hover:shadow-md">
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
-                <CardTitle>주간 트렌드</CardTitle>
+                <CardTitle>방문자 추이</CardTitle>
                 <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
-                  <ExternalLink size={14} /> 상세 보기
+                  <ExternalLink size={14} /> 상세 분석
                 </Button>
               </div>
               <CardDescription>최근 7일간의 방문자 및 페이지뷰 추이</CardDescription>
@@ -447,13 +491,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* 인기 콘텐츠 */}
+          {/* 인기 콘텐츠 - 실제 데이터 사용 */}
           <Card className="col-span-1 overflow-hidden transition-all hover:shadow-md">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>인기 콘텐츠</CardTitle>
-                  <CardDescription>최근 7일간 조회수 기준</CardDescription>
+                  <CardDescription>조회수 기준 상위 콘텐츠</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => router.push("/admin/analytics")}>
                   전체 보기
@@ -462,25 +506,64 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {MOCK_ANALYTICS.topContent.map((content, i) => (
-                  <div key={i} className="flex items-start group">
-                    <div className="mr-3 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-medium">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none group-hover:text-[#FFC83D] transition-colors">
-                        {content.title}
-                      </p>
-                      <div className="flex flex-wrap items-center text-xs text-gray-500 gap-2">
-                        <Badge variant="outline" className="rounded-full text-xs font-normal">
-                          {content.category}
-                        </Badge>
-                        <span>{content.views.toLocaleString()} 조회</span>
-                        <span>{content.avgTime} 평균 체류</span>
+                {popularContent.length > 0 ? (
+                  popularContent.map((content, i) => (
+                    <div 
+                      key={content.id} 
+                      className="flex items-start group cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                      onClick={() => handleViewArticle(content.id)}
+                    >
+                      <div className="mr-3 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-medium">
+                        {i + 1}
                       </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-none group-hover:text-[#FFC83D] transition-colors line-clamp-2">
+                          {content.title}
+                        </p>
+                        <div className="flex flex-wrap items-center text-xs text-gray-500 gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className="rounded-full text-xs font-normal"
+                            style={{ 
+                              borderColor: content.categoryColor,
+                              color: content.categoryColor 
+                            }}
+                          >
+                            {content.category}
+                          </Badge>
+                          <span className="font-medium text-blue-600">
+                            {content.views.toLocaleString()} 조회
+                          </span>
+                          <span className="text-gray-400">
+                            {new Date(content.published_at).toLocaleDateString('ko-KR', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditArticle(content.id)
+                        }}
+                      >
+                        <FileEdit className="h-4 w-4" />
+                      </Button>
                     </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <BarChart3 className="h-12 w-12 text-gray-300 mb-2" />
+                    <p className="text-gray-500">인기 콘텐츠가 없습니다</p>
+                    <Button variant="link" className="mt-2" onClick={() => router.push("/admin/posts/new")}>
+                      새 글 작성하기
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
             <CardFooter className="bg-gray-50 py-2 px-6">
