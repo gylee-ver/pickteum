@@ -63,10 +63,13 @@ export default function ContentFeed() {
     loadCategories()
   }, [])
 
-  // 글 데이터 로드
+  // 글 데이터 로드 - categories 의존성 추가
   useEffect(() => {
-    loadArticles()
-  }, [activeCategory, page])
+    // categories가 로드된 후에만 loadArticles 실행
+    if (categories.length > 0 || activeCategory === '전체') {
+      loadArticles()
+    }
+  }, [activeCategory, page, categories])
 
   const loadArticles = async () => {
     if (loadingRef.current) return
@@ -97,6 +100,13 @@ export default function ContentFeed() {
         const categoryId = categories.find(cat => cat.name === activeCategory)?.id
         if (categoryId) {
           query = query.eq('category_id', categoryId)
+        } else {
+          // 카테고리 ID를 찾지 못한 경우 빈 결과 반환
+          logger.warn(`카테고리 "${activeCategory}"의 ID를 찾을 수 없습니다.`)
+          setContent([])
+          setLoading(false)
+          loadingRef.current = false
+          return
         }
       }
       
@@ -162,6 +172,8 @@ export default function ContentFeed() {
     // 카테고리가 변경되면 스크롤을 맨 위로 이동하고 페이지 초기화
     window.scrollTo(0, 0)
     setPage(1)
+    // 콘텐츠 초기화하여 즉시 로딩 상태 표시
+    setContent([])
   }, [activeCategory])
 
   useEffect(() => {
@@ -214,22 +226,20 @@ export default function ContentFeed() {
   }
 
   return (
-    <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen bg-white relative">
+    <div className="w-full relative">
       <PickteumTracker isHomePage={true} />
-      <div className="relative max-w-3xl mx-auto" data-content="main">
-        <div className="grid gap-4">
-          {displayedContent.map((item) => (
-            <ContentCard key={item.id} {...item} />
-          ))}
-          {loading && (
-            <>
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-            </>
-          )}
-        </div>
-        <ScrollButton />
+      <div className="grid gap-4">
+        {displayedContent.map((item) => (
+          <ContentCard key={item.id} {...item} />
+        ))}
+        {loading && (
+          <>
+            <Skeleton className="h-[120px] w-full rounded-lg" />
+            <Skeleton className="h-[120px] w-full rounded-lg" />
+          </>
+        )}
       </div>
+      <ScrollButton />
     </div>
   )
 }
