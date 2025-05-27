@@ -692,7 +692,13 @@ export default function PostsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
-                    <div className="group-hover:text-[#FFC83D] transition-colors">{article.title}</div>
+                    <button 
+                      className="text-left w-full group-hover:text-[#FFC83D] transition-all duration-200 hover:underline hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 rounded px-1 py-1"
+                      onClick={() => router.push(`/admin/posts/edit/${article.id}`)}
+                      title="클릭하여 편집"
+                    >
+                      <span className="truncate block max-w-[300px]">{article.title}</span>
+                    </button>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
