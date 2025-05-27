@@ -12,6 +12,7 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
 interface ArticleClientProps {
   articleId: string
@@ -98,6 +99,17 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   // 공유 버튼 클릭 핸들러
   const handleShare = async () => {
     try {
+      // 🔥 공유 이벤트 추적 추가
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'share', {
+          method: 'short_url',
+          content_type: 'article',
+          item_id: article.id,
+          article_id: article.id,
+          category_name: article.category?.name || '미분류'
+        })
+      }
+
       setIsGeneratingUrl(true)
       setShowShareModal(true)
       
@@ -115,8 +127,26 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
       const { shortUrl: generatedUrl } = await response.json()
       setShortUrl(generatedUrl)
       
+      // 🔥 단축 URL 생성 성공 이벤트
+      if (generatedUrl && window.gtag) {
+        window.gtag('event', 'short_url_generated', {
+          article_id: article.id,
+          short_url: generatedUrl,
+          original_url: currentUrl
+        })
+      }
+      
     } catch (error) {
       console.error('단축 URL 생성 오류:', error)
+      
+      // 🔥 에러 추적
+      if (window.gtag) {
+        window.gtag('event', 'share_error', {
+          error_message: error.message,
+          article_id: article.id
+        })
+      }
+      
       alert('단축 URL 생성에 실패했습니다. 다시 시도해주세요.')
       setShowShareModal(false)
     } finally {
@@ -169,6 +199,12 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen">
+        {/* 픽틈 추적 컴포넌트 추가 */}
+        <PickteumTracker 
+          articleId={articleId}
+          categoryName={article?.category?.name}
+        />
+        
         {/* 헤더 */}
         <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center h-14 px-4">

@@ -91,7 +91,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         
-        {/* Google Analytics 4 */}
+        {/* Google Analytics 4 - 픽틈 맞춤 설정 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-8R9N5SG6WM"
           strategy="afterInteractive"
@@ -102,7 +102,38 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            gtag('config', 'G-8R9N5SG6WM');
+            // 🔥 픽틈 맞춤 GA4 설정
+            gtag('config', 'G-8R9N5SG6WM', {
+              // 향상된 측정 활성화
+              enhanced_measurements: {
+                scrolls: true,
+                outbound_clicks: true,
+                site_search: false,
+                video_engagement: false,
+                file_downloads: true
+              },
+              
+              // 북극성 지표 추적을 위한 맞춤 매개변수
+              custom_map: {
+                'custom_parameter_1': 'article_id',
+                'custom_parameter_2': 'category_name', 
+                'custom_parameter_3': 'traffic_source_detail',
+                'custom_parameter_4': 'content_depth',
+                'custom_parameter_5': 'engagement_level'
+              },
+              
+              // 뉴스 사이트 최적화 설정
+              session_timeout: 1200, // 20분
+              engagement_time_msec: 10000, // 10초 이상 체류시 참여로 간주
+              
+              // 페이지뷰 수동 제어
+              send_page_view: false
+            });
+
+            // 북극성 지표 추적용 전환 이벤트 설정
+            gtag('event', 'conversion', {
+              'send_to': 'G-8R9N5SG6WM/monthly_pageview_goal'
+            });
           `}
         </Script>
 

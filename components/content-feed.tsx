@@ -10,6 +10,7 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
 import { ScrollButton } from "@/components/ui/scroll-button"
+import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
 // 백업용 샘플 데이터 (API 로드 실패 시 사용)
 const FALLBACK_CONTENT = [
@@ -213,19 +214,22 @@ export default function ContentFeed() {
   }
 
   return (
-    <div className="relative max-w-3xl mx-auto" data-content="main">
-      <div className="grid gap-4">
-        {displayedContent.map((item) => (
-          <ContentCard key={item.id} {...item} />
-        ))}
-        {loading && (
-          <>
-            <Skeleton className="h-[120px] w-full rounded-lg" />
-            <Skeleton className="h-[120px] w-full rounded-lg" />
-          </>
-        )}
+    <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen bg-white relative">
+      <PickteumTracker isHomePage={true} />
+      <div className="relative max-w-3xl mx-auto" data-content="main">
+        <div className="grid gap-4">
+          {displayedContent.map((item) => (
+            <ContentCard key={item.id} {...item} />
+          ))}
+          {loading && (
+            <>
+              <Skeleton className="h-[120px] w-full rounded-lg" />
+              <Skeleton className="h-[120px] w-full rounded-lg" />
+            </>
+          )}
+        </div>
+        <ScrollButton />
       </div>
-      <ScrollButton />
     </div>
   )
 }

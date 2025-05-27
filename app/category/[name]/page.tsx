@@ -7,6 +7,7 @@ import Footer from "@/components/footer"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { generateCategoryCollectionSchema, generateBreadcrumbSchema } from '@/lib/structured-data'
+import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
 // 카테고리별 메타데이터 생성
 export async function generateMetadata({ params }: { params: { name: string } }): Promise<Metadata> {
@@ -98,6 +99,9 @@ export default async function CategoryPage({ params }: { params: { name: string 
 
         <div className="flex min-h-screen flex-col bg-white">
           <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen">
+            {/* 픽틈 추적 컴포넌트 추가 */}
+            <PickteumTracker categoryName={categoryName} />
+            
             <Header />
             
             <main className="flex-grow px-4 py-6">
