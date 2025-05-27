@@ -24,6 +24,19 @@ import {
   ExternalLink,
   ArrowRight,
 } from "lucide-react"
+import supabase from "@/lib/supabase"
+import { logger } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+
+// 활동 타입 정의
+interface RecentActivity {
+  id: string
+  type: 'publish' | 'edit' | 'draft' | 'schedule' | 'delete'
+  title: string
+  time: string
+  user: string
+  article_id?: string
+}
 
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const MOCK_ANALYTICS = {
@@ -51,17 +64,6 @@ const MOCK_ANALYTICS = {
       category: "정치/시사",
     },
   ],
-  drafts: [
-    { title: "여름철 건강관리 팁: 무더위 속 체력 유지하기", updatedAt: "2025-05-11T09:23:00Z", author: "pickteum1" },
-    { title: "올림픽 메달 유망주 분석: 한국 선수단 전망", updatedAt: "2025-05-10T16:45:00Z", author: "pickteum2" },
-  ],
-  scheduled: [
-    {
-      title: "디지털 노마드 라이프스타일: 원격 근무의 장단점",
-      scheduledAt: "2025-05-12T08:00:00Z",
-      author: "pickteum1",
-    },
-  ],
   categoryData: [
     { name: "건강", value: 35 },
     { name: "스포츠", value: 25 },
@@ -77,32 +79,6 @@ const MOCK_ANALYTICS = {
     { name: "5/9", visitors: 1150, pageviews: 3700 },
     { name: "5/10", visitors: 1200, pageviews: 3850 },
     { name: "5/11", visitors: 1245, pageviews: 3890 },
-  ],
-  recentActivity: [
-    {
-      type: "publish",
-      title: "건강한 식습관으로 면역력 높이는 7가지 방법",
-      time: "2025-05-10T09:00:00Z",
-      user: "pickteum1",
-    },
-    {
-      type: "edit",
-      title: "2025 프로야구 시즌 전망: 주목해야 할 신인 선수들",
-      time: "2025-05-09T14:15:00Z",
-      user: "pickteum2",
-    },
-    {
-      type: "draft",
-      title: "여름철 건강관리 팁: 무더위 속 체력 유지하기",
-      time: "2025-05-11T09:23:00Z",
-      user: "pickteum1",
-    },
-    {
-      type: "schedule",
-      title: "디지털 노마드 라이프스타일: 원격 근무의 장단점",
-      time: "2025-05-11T14:30:00Z",
-      user: "pickteum1",
-    },
   ],
 }
 
@@ -204,33 +180,133 @@ function StatCard({
   )
 }
 
-// 활동 배지 컴포넌트
+// 활동 배지 컴포넌트 - UI 개선
 function ActivityBadge({ type }: { type: string }) {
   switch (type) {
     case "publish":
-      return <Badge className="bg-green-500">발행</Badge>
+      return <Badge className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-0.5">발행</Badge>
     case "edit":
-      return <Badge className="bg-blue-500">수정</Badge>
+      return <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-0.5">수정</Badge>
     case "draft":
-      return (
-        <Badge variant="outline" className="text-gray-500">
-          초안
-        </Badge>
-      )
+      return <Badge variant="outline" className="text-gray-600 border-gray-300 text-xs px-2 py-0.5">초안</Badge>
     case "schedule":
-      return <Badge className="bg-purple-500">예약</Badge>
+      return <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-2 py-0.5">예약</Badge>
     default:
-      return <Badge variant="outline">{type}</Badge>
+      return <Badge variant="outline" className="text-xs px-2 py-0.5">{type}</Badge>
   }
 }
 
 export default function DashboardPage() {
   const [userName, setUserName] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [drafts, setDrafts] = useState<any[]>([])
+  const [scheduled, setScheduled] = useState<any[]>([])
   const router = useRouter()
 
+  // 실제 데이터 로드 함수들
+  const loadRecentActivity = async () => {
+    try {
+      // 최근 아티클 활동 가져오기 (최근 10개)
+      const { data: articles, error: articlesError } = await supabase
+        .from('articles')
+        .select('id, title, status, author, created_at, updated_at, published_at')
+        .order('updated_at', { ascending: false })
+        .limit(10)
+
+      if (articlesError) {
+        logger.error('아티클 데이터 로드 오류:', articlesError)
+        return
+      }
+
+      // 활동 데이터 변환
+      const activities: RecentActivity[] = []
+      
+      articles?.forEach(article => {
+        // 발행된 아티클
+        if (article.status === 'published' && article.published_at) {
+          activities.push({
+            id: `publish-${article.id}`,
+            type: 'publish',
+            title: article.title,
+            time: article.published_at,
+            user: article.author,
+            article_id: article.id
+          })
+        }
+        
+        // 초안 아티클
+        if (article.status === 'draft') {
+          activities.push({
+            id: `draft-${article.id}`,
+            type: 'draft',
+            title: article.title,
+            time: article.updated_at,
+            user: article.author,
+            article_id: article.id
+          })
+        }
+        
+        // 예약 발행 아티클
+        if (article.status === 'scheduled') {
+          activities.push({
+            id: `schedule-${article.id}`,
+            type: 'schedule',
+            title: article.title,
+            time: article.updated_at,
+            user: article.author,
+            article_id: article.id
+          })
+        }
+      })
+
+      // 시간순으로 정렬
+      activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      
+      setRecentActivity(activities.slice(0, 8)) // 최근 8개만 표시
+      
+    } catch (err) {
+      logger.error('최근 활동 로드 중 예외:', err)
+    }
+  }
+
+  const loadDraftsAndScheduled = async () => {
+    try {
+      // 초안 아티클 가져오기
+      const { data: draftsData, error: draftsError } = await supabase
+        .from('articles')
+        .select('id, title, author, updated_at')
+        .eq('status', 'draft')
+        .order('updated_at', { ascending: false })
+        .limit(5)
+
+      if (draftsError) {
+        logger.error('초안 데이터 로드 오류:', draftsError)
+      } else {
+        setDrafts(draftsData || [])
+      }
+
+      // 예약 발행 아티클 가져오기
+      const { data: scheduledData, error: scheduledError } = await supabase
+        .from('articles')
+        .select('id, title, author, published_at')
+        .eq('status', 'scheduled')
+        .order('published_at', { ascending: true })
+        .limit(5)
+
+      if (scheduledError) {
+        logger.error('예약 발행 데이터 로드 오류:', scheduledError)
+      } else {
+        setScheduled(scheduledData || [])
+      }
+
+    } catch (err) {
+      logger.error('초안/예약 발행 데이터 로드 중 예외:', err)
+    }
+  }
+
   useEffect(() => {
-    // 로그인 상태 확인 - 실제 구현 시 토큰 검증 등으로 대체
+    // 로그인 상태 확인
     const user = localStorage.getItem("pickteum_user") || sessionStorage.getItem("pickteum_user")
     if (!user) {
       router.push("/admin/login")
@@ -238,13 +314,23 @@ export default function DashboardPage() {
     }
     setUserName(user)
 
-    // API 호출 시뮬레이션
-    const timer = setTimeout(() => {
+    // 실제 데이터 로드
+    const loadData = async () => {
+      setIsLoading(true)
+      await Promise.all([
+        loadRecentActivity(),
+        loadDraftsAndScheduled()
+      ])
       setIsLoading(false)
-    }, 800)
+    }
 
-    return () => clearTimeout(timer)
+    loadData()
   }, [router])
+
+  // 아티클 편집 페이지로 이동
+  const handleEditArticle = (articleId: string) => {
+    router.push(`/admin/posts/edit/${articleId}`)
+  }
 
   if (isLoading) {
     return (
@@ -408,7 +494,7 @@ export default function DashboardPage() {
             </CardFooter>
           </Card>
 
-          {/* 할일 목록 */}
+          {/* 할일 목록 - 실제 데이터 사용 */}
           <Card className="col-span-1 overflow-hidden transition-all hover:shadow-md">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -422,24 +508,24 @@ export default function DashboardPage() {
               <Tabs defaultValue="drafts">
                 <TabsList className="mb-4 w-full">
                   <TabsTrigger value="drafts" className="flex-1">
-                    초안 ({MOCK_ANALYTICS.drafts.length})
+                    초안 ({drafts.length})
                   </TabsTrigger>
                   <TabsTrigger value="scheduled" className="flex-1">
-                    예약 발행 ({MOCK_ANALYTICS.scheduled.length})
+                    예약 발행 ({scheduled.length})
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="drafts" className="space-y-4 min-h-[240px]">
-                  {MOCK_ANALYTICS.drafts.length > 0 ? (
-                    MOCK_ANALYTICS.drafts.map((draft, i) => (
-                      <div key={i} className="flex items-start justify-between border-b pb-3 group">
+                  {drafts.length > 0 ? (
+                    drafts.map((draft) => (
+                      <div key={draft.id} className="flex items-start justify-between border-b pb-3 group">
                         <div className="flex-1">
                           <p className="text-sm font-medium group-hover:text-[#FFC83D] transition-colors">
                             {draft.title}
                           </p>
                           <div className="flex items-center text-xs text-gray-500">
                             <span>
-                              {new Date(draft.updatedAt).toLocaleString("ko-KR", {
+                              {new Date(draft.updated_at).toLocaleString("ko-KR", {
                                 month: "numeric",
                                 day: "numeric",
                                 hour: "2-digit",
@@ -450,7 +536,12 @@ export default function DashboardPage() {
                             <span>{draft.author}</span>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-8">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8"
+                          onClick={() => handleEditArticle(draft.id)}
+                        >
                           <FileEdit className="mr-1 h-4 w-4" />
                           편집
                         </Button>
@@ -468,9 +559,9 @@ export default function DashboardPage() {
                 </TabsContent>
 
                 <TabsContent value="scheduled" className="space-y-4 min-h-[240px]">
-                  {MOCK_ANALYTICS.scheduled.length > 0 ? (
-                    MOCK_ANALYTICS.scheduled.map((item, i) => (
-                      <div key={i} className="flex items-start justify-between border-b pb-3 group">
+                  {scheduled.length > 0 ? (
+                    scheduled.map((item) => (
+                      <div key={item.id} className="flex items-start justify-between border-b pb-3 group">
                         <div className="flex-1">
                           <p className="text-sm font-medium group-hover:text-[#FFC83D] transition-colors">
                             {item.title}
@@ -478,7 +569,7 @@ export default function DashboardPage() {
                           <div className="flex items-center text-xs text-gray-500">
                             <span className="flex items-center text-blue-600">
                               <Calendar size={12} className="mr-1" />
-                              {new Date(item.scheduledAt).toLocaleString("ko-KR", {
+                              {new Date(item.published_at).toLocaleString("ko-KR", {
                                 month: "numeric",
                                 day: "numeric",
                                 hour: "2-digit",
@@ -489,7 +580,12 @@ export default function DashboardPage() {
                             <span>{item.author}</span>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-8">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8"
+                          onClick={() => handleEditArticle(item.id)}
+                        >
                           <FileEdit className="mr-1 h-4 w-4" />
                           편집
                         </Button>
@@ -519,46 +615,94 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* 최근 활동 */}
+        {/* 최근 활동 - UI 최적화 */}
         <Card className="overflow-hidden transition-all hover:shadow-md">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>최근 활동</CardTitle>
-                <CardDescription>관리자 활동 내역</CardDescription>
+                <CardTitle className="text-lg">최근 활동</CardTitle>
+                <CardDescription className="text-sm mt-1">관리자 활동 내역</CardDescription>
               </div>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => router.push("/admin/posts")}
+              >
                 모든 활동 보기
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="relative pl-6 border-l border-gray-200">
-              {MOCK_ANALYTICS.recentActivity.map((activity, i) => (
-                <div key={i} className="mb-6 relative">
-                  <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-white border-2 border-[#FFC83D]"></div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
-                    <div className="flex items-center gap-2">
-                      <ActivityBadge type={activity.type} />
-                      <span className="text-sm font-medium">{activity.user}</span>
+          <CardContent className="pt-0">
+            {recentActivity.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div 
+                    key={activity.id} 
+                    className={cn(
+                      "relative pl-8 pb-4 group cursor-pointer",
+                      index !== recentActivity.length - 1 && "border-b border-gray-100"
+                    )}
+                    onClick={() => activity.article_id && handleEditArticle(activity.article_id)}
+                  >
+                    {/* 타임라인 점 */}
+                    <div className="absolute left-0 top-1 w-3 h-3 rounded-full bg-[#FFC83D] border-2 border-white shadow-sm"></div>
+                    
+                    {/* 타임라인 선 */}
+                    {index !== recentActivity.length - 1 && (
+                      <div className="absolute left-[5px] top-4 w-0.5 h-full bg-gray-200"></div>
+                    )}
+                    
+                    {/* 활동 내용 */}
+                    <div className="space-y-2">
+                      {/* 상단: 배지와 시간 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ActivityBadge type={activity.type} />
+                          <span className="text-sm font-medium text-gray-700">{activity.user}</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-mono">
+                          {new Date(activity.time).toLocaleString("ko-KR", {
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      
+                      {/* 하단: 제목 */}
+                      <p className="text-sm text-gray-900 group-hover:text-[#FFC83D] transition-colors duration-200 leading-relaxed">
+                        {activity.title}
+                      </p>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {new Date(activity.time).toLocaleString("ko-KR", {
-                        month: "numeric",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
                   </div>
-                  <p className="text-sm">{activity.title}</p>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <Clock className="h-8 w-8 text-gray-400" />
                 </div>
-              ))}
-            </div>
+                <p className="text-gray-500 mb-3">최근 활동이 없습니다</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => router.push("/admin/posts/new")}
+                  className="text-xs"
+                >
+                  새 글 작성하기
+                </Button>
+              </div>
+            )}
           </CardContent>
-          <CardFooter className="bg-gray-50 py-3 px-6 flex justify-center">
-            <Button variant="link" className="text-sm text-gray-500 flex items-center">
-              모든 활동 기록 보기 <ArrowRight className="ml-1 h-4 w-4" />
+          <CardFooter className="bg-gray-50/50 py-3 px-6 border-t">
+            <Button 
+              variant="link" 
+              className="mx-auto text-xs text-gray-500 flex items-center hover:text-gray-700 transition-colors"
+              onClick={() => router.push("/admin/posts")}
+            >
+              모든 활동 기록 보기 <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </CardFooter>
         </Card>
