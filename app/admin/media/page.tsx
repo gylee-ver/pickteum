@@ -49,6 +49,8 @@ import {
   Info,
   AlertCircle,
   Loader2,
+  Folder,
+  FolderOpen,
 } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import type { DateRange } from "react-day-picker"
@@ -63,27 +65,17 @@ interface MediaFile {
   dimensions?: string
   url: string
   path: string
+  folder: string
   uploadedBy: string
   uploadedAt: string
   usedIn: string[]
   metadata?: any
 }
 
-interface FileObject {
+interface FolderInfo {
   name: string
-  id: string
-  updated_at: string
-  created_at: string
-  last_accessed_at: string
-  metadata: {
-    eTag: string
-    size: number
-    mimetype: string
-    cacheControl: string
-    lastModified: string
-    contentLength: number
-    httpStatusCode: number
-  }
+  path: string
+  fileCount: number
 }
 
 // 파일 크기 포맷팅 함수
@@ -110,7 +102,20 @@ function getFileIcon(type: string) {
   }
 }
 
-// 이미지 차원 가져오기 함수
+// 이미지 차원 정보를 URL에서 가져오는 함수 - 수정됨
+const getImageDimensionsFromUrl = async (url: string): Promise<string | null> => {
+  return new Promise((resolve) => {
+    // Next.js Image 컴포넌트와 구분하기 위해 HTMLImageElement 사용
+    const img = new window.Image() // 또는 document.createElement('img')
+    img.onload = () => {
+      resolve(`${img.width}x${img.height}`)
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+// 기존 getImageDimensions 함수도 수정
 function getImageDimensions(file: File): Promise<string | null> {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
@@ -118,11 +123,15 @@ function getImageDimensions(file: File): Promise<string | null> {
       return
     }
     
-    const img = new Image()
+    const img = new window.Image() // HTMLImageElement 명시적 사용
     img.onload = () => {
       resolve(`${img.width}x${img.height}`)
+      URL.revokeObjectURL(img.src) // 메모리 정리
     }
-    img.onerror = () => resolve(null)
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src) // 메모리 정리
+      resolve(null)
+    }
     img.src = URL.createObjectURL(file)
   })
 }
@@ -149,6 +158,8 @@ async function getImageUsage(imageUrl: string): Promise<string[]> {
 
 export default function MediaLibraryPage() {
   const [media, setMedia] = useState<MediaFile[]>([])
+  const [folders, setFolders] = useState<FolderInfo[]>([])
+  const [selectedFolder, setSelectedFolder] = useState<string>("all") // "all", "images", "thumbnails", etc.
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
@@ -168,91 +179,246 @@ export default function MediaLibraryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
+  // 현재 사용자 정보 가져오기 함수 추가
+  const getCurrentUser = (): string => {
+    if (typeof window === 'undefined') return '시스템'
+    
+    const user = localStorage.getItem("pickteum_user") || 
+                 sessionStorage.getItem("pickteum_user")
+    
+    return user || '알 수 없음'
+  }
+
+  // 이미지 사용처 확인 함수 - 에러 처리 개선
+  const getImageUsage = async (imageUrl: string): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('title, thumbnail')
+        .or(`thumbnail.eq.${imageUrl},content.ilike.%${imageUrl}%`)
+      
+      if (error) {
+        console.error('이미지 사용처 조회 오류:', error)
+        return []
+      }
+      
+      return data?.map(article => article.title) || []
+    } catch (error) {
+      console.error('이미지 사용처 조회 예외:', error)
+      return []
+    }
+  }
+
   // 미디어 파일 로드
   useEffect(() => {
     loadMediaFiles()
   }, [])
+
+  // 재귀적으로 모든 폴더의 파일을 가져오는 함수 - 수정됨
+  const loadFilesFromFolder = async (folderPath: string = ''): Promise<MediaFile[]> => {
+    try {
+      console.log(`폴더 조회 시작: "${folderPath}"`)
+      
+      // Storage API 호출 시 에러 처리 강화
+      const { data: files, error } = await supabase.storage
+        .from('article-thumbnails')
+        .list(folderPath, {
+          limit: 1000,
+          offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' }
+        })
+
+      if (error) {
+        console.error(`폴더 ${folderPath} 조회 오류:`, error)
+        
+        // 특정 오류 타입에 따른 처리
+        if (error.message?.includes('not valid JSON')) {
+          console.error('Storage API 인증 또는 권한 문제 발생')
+          throw new Error('Storage 접근 권한이 없습니다. 관리자에게 문의하세요.')
+        }
+        
+        return []
+      }
+
+      if (!files) {
+        console.log(`폴더 ${folderPath}에 파일이 없습니다.`)
+        return []
+      }
+
+      console.log(`폴더 ${folderPath}에서 ${files.length}개 항목 발견`)
+
+      const mediaFiles: MediaFile[] = []
+      const subFolders: string[] = []
+
+      for (const file of files) {
+        try {
+          // 폴더인 경우 (metadata가 null이고 확장자가 없는 경우)
+        if (!file.metadata && file.name && !file.name.includes('.')) {
+            const subFolderPath = folderPath ? `${folderPath}/${file.name}` : file.name
+            subFolders.push(subFolderPath)
+            console.log(`하위 폴더 발견: ${subFolderPath}`)
+          continue
+        }
+
+          // 파일인 경우 (metadata가 있는 경우)
+          if (file.metadata && file.name) {
+            const filePath = folderPath ? `${folderPath}/${file.name}` : file.name
+            
+            // 공개 URL 가져오기 - 에러 처리 추가
+            const { data: urlData } = supabase.storage
+              .from('article-thumbnails')
+              .getPublicUrl(filePath)
+            
+            if (!urlData?.publicUrl) {
+              console.error(`파일 ${filePath}의 공개 URL을 가져올 수 없습니다.`)
+              continue
+            }
+            
+            const publicUrl = urlData.publicUrl
+
+            // 이미지 사용처 확인 (비동기 처리 최적화)
+            let usedIn: string[] = []
+            try {
+              usedIn = await getImageUsage(publicUrl)
+            } catch (error) {
+              console.warn(`파일 ${filePath}의 사용처 확인 실패:`, error)
+            }
+
+            // 이미지 차원 정보 (조건부 처리)
+            let dimensions: string | undefined
+            if (file.metadata?.mimetype?.startsWith('image/')) {
+              try {
+              dimensions = await getImageDimensionsFromUrl(publicUrl)
+              } catch (error) {
+                console.warn(`파일 ${filePath}의 차원 정보 가져오기 실패:`, error)
+              }
+            }
+
+            const mediaFile: MediaFile = {
+              id: filePath,
+              name: file.name,
+              type: file.metadata?.mimetype || 'application/octet-stream',
+              size: file.metadata?.size || 0,
+              dimensions,
+              url: publicUrl,
+              path: filePath,
+              folder: folderPath || 'root',
+              uploadedBy: getCurrentUser(),
+              uploadedAt: file.created_at || file.updated_at || new Date().toISOString(),
+              usedIn,
+              metadata: file.metadata
+            }
+
+            mediaFiles.push(mediaFile)
+            console.log(`파일 처리 완료: ${filePath}`)
+          }
+        } catch (fileError) {
+          console.error(`파일 ${file.name} 처리 중 오류:`, fileError)
+          continue // 개별 파일 오류는 건너뛰고 계속 진행
+        }
+      }
+
+      // 하위 폴더들도 재귀적으로 처리 (병렬 처리로 성능 개선)
+      if (subFolders.length > 0) {
+        console.log(`${subFolders.length}개 하위 폴더 처리 시작`)
+        
+        const subFolderPromises = subFolders.map(subFolder => 
+          loadFilesFromFolder(subFolder).catch(error => {
+            console.error(`하위 폴더 ${subFolder} 처리 실패:`, error)
+            return [] // 실패한 폴더는 빈 배열 반환
+          })
+        )
+        
+        const subFolderResults = await Promise.all(subFolderPromises)
+        subFolderResults.forEach(subFolderFiles => {
+          mediaFiles.push(...subFolderFiles)
+        })
+      }
+
+      console.log(`폴더 ${folderPath} 처리 완료: ${mediaFiles.length}개 파일`)
+      return mediaFiles
+
+    } catch (error) {
+      console.error(`폴더 ${folderPath} 로드 실패:`, error)
+      
+      // 사용자에게 친화적인 오류 메시지
+      if (error instanceof Error) {
+        throw error // 이미 처리된 오류는 그대로 전달
+      } else {
+        throw new Error(`폴더 "${folderPath}" 로드 중 예상치 못한 오류가 발생했습니다.`)
+      }
+    }
+  }
+
+  // 폴더 정보 수집
+  const collectFolderInfo = (files: MediaFile[]): FolderInfo[] => {
+    const folderMap = new Map<string, number>()
+    
+    files.forEach(file => {
+      const folder = file.folder
+      folderMap.set(folder, (folderMap.get(folder) || 0) + 1)
+    })
+
+    const folderInfos: FolderInfo[] = []
+    folderMap.forEach((count, folderName) => {
+      folderInfos.push({
+        name: folderName === 'root' ? '루트' : folderName,
+        path: folderName,
+        fileCount: count
+      })
+    })
+
+    return folderInfos.sort((a, b) => a.name.localeCompare(b.name))
+  }
 
   const loadMediaFiles = async () => {
     try {
       setIsLoading(true)
       setIsError(false)
 
-      // Supabase Storage API를 직접 사용
-      const { data: files, error } = await supabase.storage
-        .from('article-thumbnails')
-        .list('', {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'created_at', order: 'desc' }
-        })
-
-      if (error) {
-        console.error('Storage 파일 목록 조회 오류:', error)
-        throw error
-      }
-
-      console.log('Storage 파일 목록:', files)
-
-      // 파일 메타데이터 처리
-      const mediaFiles: MediaFile[] = await Promise.all(
-        files.map(async (file: any) => {
-          try {
-            // 공개 URL 가져오기
-            const { data: urlData } = supabase.storage
-              .from('article-thumbnails')
-              .getPublicUrl(file.name)
-            
-            const publicUrl = urlData.publicUrl
-
-            // 이미지 사용처 확인
-            const usedIn = await getImageUsage(publicUrl)
-
-            // 이미지 차원 설정 (실제로는 메타데이터에서 가져와야 하지만 간단히 처리)
-            let dimensions: string | undefined
-            if (file.metadata?.mimetype?.startsWith('image/')) {
-              dimensions = "알 수 없음"
-            }
-
-            const mediaFile: MediaFile = {
-              id: file.id || file.name,
-              name: file.name,
-              type: file.metadata?.mimetype || 'application/octet-stream',
-              size: file.metadata?.size || 0,
-              dimensions,
-              url: publicUrl,
-              path: file.name,
-              uploadedBy: "시스템", // 실제로는 메타데이터에서 가져와야 함
-              uploadedAt: file.created_at || file.updated_at || new Date().toISOString(),
-              usedIn,
-              metadata: file.metadata
-            }
-
-            return mediaFile
-          } catch (error) {
-            console.error('파일 메타데이터 처리 오류:', error)
-            return null
-          }
-        })
-      )
-
-      // null 값 필터링
-      const validMediaFiles = mediaFiles.filter(file => file !== null) as MediaFile[]
+      console.log('모든 폴더에서 파일 로드 시작...')
       
-      setMedia(validMediaFiles)
+      // Storage 버킷 접근 권한 확인
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage
+          .getBucket('article-thumbnails')
+        
+        if (bucketError) {
+          console.warn('버킷 정보 확인 실패:', bucketError)
+          // 버킷 정보 확인 실패해도 계속 진행 (권한 문제일 수 있음)
+        } else {
+          console.log('버킷 확인 완료:', bucketData)
+        }
+      } catch (bucketCheckError) {
+        console.warn('버킷 확인 중 예외:', bucketCheckError)
+      }
+      
+      // 모든 폴더의 파일을 재귀적으로 로드
+      const allFiles = await loadFilesFromFolder('')
+      
+      console.log('로드된 전체 파일:', allFiles.length)
+
+      // 폴더 정보 수집
+      const folderInfos = collectFolderInfo(allFiles)
+      
+      setMedia(allFiles)
+      setFolders(folderInfos)
       
       toast({
         title: "미디어 파일 로드 완료",
-        description: `${validMediaFiles.length}개의 파일을 불러왔습니다.`,
+        description: `${allFiles.length}개의 파일을 ${folderInfos.length}개 폴더에서 불러왔습니다.`,
       })
 
     } catch (error) {
       console.error('미디어 파일 로드 실패:', error)
       setIsError(true)
+      
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      
       toast({
         variant: "destructive",
         title: "미디어 파일 로드 실패",
-        description: "Storage에서 파일 목록을 불러오는 중 오류가 발생했습니다.",
+        description: errorMessage,
       })
     } finally {
       setIsLoading(false)
@@ -261,6 +427,11 @@ export default function MediaLibraryPage() {
 
   // 필터링된 미디어
   const filteredMedia = media.filter((item) => {
+    // 폴더 필터
+    if (selectedFolder !== "all" && item.folder !== selectedFolder) {
+      return false
+    }
+
     // 검색어 필터
     if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false
@@ -408,18 +579,22 @@ export default function MediaLibraryPage() {
       for (let i = 0; i < uploadFiles.length; i++) {
         const file = uploadFiles[i]
         
-        // 진행률 업데이트
         setUploadProgress(Math.round((i / uploadFiles.length) * 90))
 
         try {
+          // 파일 타입에 따라 폴더 결정
+          const isImage = file.type.startsWith('image/')
+          const targetFolder = isImage ? 'images' : 'thumbnails'
+          
           // 파일명 생성 (중복 방지)
           const fileExt = file.name.split('.').pop()
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+          const filePath = `${targetFolder}/${fileName}`
           
           // 파일 업로드
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('article-thumbnails')
-            .upload(fileName, file, {
+            .upload(filePath, file, {
               cacheControl: '3600',
               upsert: false
             })
@@ -432,21 +607,22 @@ export default function MediaLibraryPage() {
           // 공개 URL 가져오기
           const { data: urlData } = supabase.storage
             .from('article-thumbnails')
-            .getPublicUrl(fileName)
+            .getPublicUrl(filePath)
           
           // 이미지 차원 가져오기
           const dimensions = await getImageDimensions(file)
 
           // 새 미디어 파일 객체 생성
           const newMediaFile: MediaFile = {
-            id: fileName,
+            id: filePath,
             name: file.name,
             type: file.type,
             size: file.size,
             dimensions: dimensions || undefined,
             url: urlData.publicUrl,
-            path: fileName,
-            uploadedBy: "현재사용자", // 실제로는 인증된 사용자 정보 사용
+            path: filePath,
+            folder: targetFolder,
+            uploadedBy: getCurrentUser(),
             uploadedAt: new Date().toISOString(),
             usedIn: [],
             metadata: {
@@ -471,6 +647,10 @@ export default function MediaLibraryPage() {
 
       // 로컬 상태 업데이트
       setMedia(prev => [...uploadedFiles, ...prev])
+      
+      // 폴더 정보 업데이트
+      const updatedFolders = collectFolderInfo([...uploadedFiles, ...media])
+      setFolders(updatedFolders)
 
       setTimeout(() => {
         setIsUploading(false)
@@ -635,6 +815,34 @@ export default function MediaLibraryPage() {
         </div>
       </div>
 
+      {/* 폴더 선택 탭 추가 */}
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <Tabs value={selectedFolder} onValueChange={setSelectedFolder} className="w-full">
+            <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
+              <TabsTrigger
+                value="all"
+                className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#FFC83D] data-[state=active]:bg-transparent"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                전체 ({media.length})
+              </TabsTrigger>
+              {folders.map((folder) => (
+                <TabsTrigger
+                  key={folder.path}
+                  value={folder.path}
+                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#FFC83D] data-[state=active]:bg-transparent"
+                >
+                  <Folder className="mr-2 h-4 w-4" />
+                  {folder.name} ({folder.fileCount})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* 기존 타입별 탭 */}
       <Card className="mb-6">
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -643,19 +851,19 @@ export default function MediaLibraryPage() {
                 value="all"
                 className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#FFC83D] data-[state=active]:bg-transparent"
               >
-                전체 ({typeCounts.all})
+                전체 ({filteredMedia.length})
               </TabsTrigger>
               <TabsTrigger
                 value="images"
                 className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#FFC83D] data-[state=active]:bg-transparent"
               >
-                이미지 ({typeCounts.images})
+                이미지 ({filteredMedia.filter(item => item.type.startsWith("image/")).length})
               </TabsTrigger>
               <TabsTrigger
                 value="documents"
                 className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#FFC83D] data-[state=active]:bg-transparent"
               >
-                문서 ({typeCounts.documents})
+                문서 ({filteredMedia.filter(item => item.type.includes("pdf") || item.type.includes("document")).length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
