@@ -28,6 +28,16 @@ Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /api/
 
+# 🔥 애드센스 크롤러 추가
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+
 # 네이버 검색로봇 (네이버 서치어드바이저)
 User-agent: Yeti
 Allow: /
@@ -47,10 +57,6 @@ Disallow: /api/
 
 # 구글 모바일 친화성 테스트 봇
 User-agent: Chrome-Lighthouse
-Allow: /
-
-# 구글 AdsBot
-User-agent: AdsBot-Google
 Allow: /
 
 # 빙 검색로봇

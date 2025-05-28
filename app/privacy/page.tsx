@@ -124,7 +124,23 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mb-8">
-              <h3 className="text-lg font-semibold text-[#212121] mb-4">8. 개인정보보호책임자</h3>
+              <h3 className="text-lg font-semibold text-[#212121] mb-4">8. 광고 서비스 관련 개인정보 처리</h3>
+              <p className="text-sm text-[#333333] leading-relaxed mb-4">
+                회사는 맞춤형 광고 서비스 제공을 위해 다음과 같이 개인정보를 처리할 수 있습니다.
+              </p>
+              <ul className="list-disc pl-6 space-y-2 text-sm text-[#333333]">
+                <li>구글 애드센스를 통한 맞춤형 광고 제공</li>
+                <li>쿠키 및 유사 기술을 통한 사용자 관심사 분석</li>
+                <li>광고 효과 측정 및 개선을 위한 데이터 활용</li>
+              </ul>
+              <p className="text-sm text-[#333333] leading-relaxed mt-4">
+                사용자는 브라우저 설정을 통해 쿠키 사용을 거부하거나 삭제할 수 있으며, 
+                구글 광고 설정 페이지에서 맞춤형 광고를 비활성화할 수 있습니다.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h3 className="text-lg font-semibold text-[#212121] mb-4">9. 개인정보보호책임자</h3>
               <div className="bg-blue-50 p-4 rounded-md">
                 <p className="text-sm text-[#333333] leading-relaxed">
                   <strong>개인정보보호책임자:</strong> 이건용<br/>
@@ -138,7 +154,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mb-8">
-              <h3 className="text-lg font-semibold text-[#212121] mb-4">9. 개인정보 처리방침 변경</h3>
+              <h3 className="text-lg font-semibold text-[#212121] mb-4">10. 개인정보 처리방침 변경</h3>
               <p className="text-sm text-[#333333] leading-relaxed mb-4">
                 이 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경내용의 추가, 삭제 및 정정이 있는 경우에는 변경사항의 시행 7일 전부터 공지사항을 통하여 고지할 것입니다.
               </p>
