@@ -6,6 +6,7 @@ User-agent: *
 Allow: /
 Allow: /sitemap.xml
 Allow: /_next/image/*
+Allow: /ads.txt
 
 # 사이트맵 위치
 Sitemap: https://www.pickteum.com/sitemap.xml
@@ -25,10 +26,11 @@ Allow: /_next/image/*
 User-agent: Googlebot
 Allow: /
 Allow: /sitemap.xml
+Allow: /ads.txt
 Disallow: /admin/
 Disallow: /api/
 
-# 🔥 애드센스 크롤러 추가
+# 🔥 애드센스 크롤러 허용
 User-agent: Mediapartners-Google
 Allow: /
 

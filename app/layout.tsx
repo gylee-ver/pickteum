@@ -68,6 +68,9 @@ export const metadata: Metadata = {
     naver: '42769cb438f20728e074ac6432888e234709d9af',
   },
   category: '뉴스',
+  other: {
+    'google-adsense-account': 'ca-pub-6018069358099295',
+  },
 }
 
 export default function RootLayout({
@@ -90,6 +93,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        
+        {/* 🔥 구글 애드센스 메타태그 */}
+        <meta name="google-adsense-account" content="ca-pub-6018069358099295" />
+        
+        {/* 🔥 구글 애드센스 스크립트 */}
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295"
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+        />
         
         {/* Google Analytics 4 - 픽틈 맞춤 설정 */}
         <Script

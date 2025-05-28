@@ -1,7 +1,5 @@
 import Link from "next/link"
 import { Facebook, Instagram, Twitter, Youtube } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -9,47 +7,38 @@ export default function Footer() {
   return (
     <footer className="w-full bg-white border-t border-gray-100 mt-auto">
       <div className="w-full max-w-[480px] mx-auto px-4 py-8">
-        {/* 뉴스레터 구독 */}
-        <div className="mb-8">
-          <h3 className="text-base font-semibold text-[#212121] mb-2">뉴스레터 구독</h3>
-          <div className="flex gap-2">
-            <Input type="email" placeholder="이메일 주소 입력" className="flex-1" />
-            <Button className="bg-[#FFC83D] hover:bg-[#FFB800] text-white">구독하기</Button>
-          </div>
-        </div>
-
         {/* 푸터 링크 */}
         <div className="grid grid-cols-2 gap-6 mb-8">
           <div>
             <h4 className="text-sm font-semibold text-[#212121] mb-3">카테고리</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/category/health" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href="/category/건강" className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   건강
                 </Link>
               </li>
               <li>
-                <Link href="/category/sports" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href="/category/스포츠" className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   스포츠
                 </Link>
               </li>
               <li>
-                <Link href="/category/politics" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href={`/category/${encodeURIComponent('정치/시사')}`} className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   정치/시사
                 </Link>
               </li>
               <li>
-                <Link href="/category/economy" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href="/category/경제" className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   경제
                 </Link>
               </li>
               <li>
-                <Link href="/category/lifestyle" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href="/category/라이프" className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   라이프
                 </Link>
               </li>
               <li>
-                <Link href="/category/tech" className="text-sm text-[#767676] hover:text-[#FFC83D]">
+                <Link href="/category/테크" className="text-sm text-[#767676] hover:text-[#FFC83D]">
                   테크
                 </Link>
               </li>
