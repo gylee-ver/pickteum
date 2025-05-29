@@ -35,6 +35,16 @@ const CATEGORIES = [
   { name: "테크", color: "#607D8B" },
 ]
 
+// 🔥 카테고리별 작성자 매핑
+const CATEGORY_AUTHOR_MAP: Record<string, string> = {
+  "건강": "픽틈 헬스·라이프팀",
+  "스포츠": "픽틈 스포츠이슈팀", 
+  "정치/시사": "픽틈 정치·시사팀",
+  "경제": "픽틈 경제·산업팀",
+  "라이프": "픽틈 헬스·라이프팀",
+  "테크": "픽틈 IT·테크팀",
+}
+
 export default function NewPostPage() {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -66,6 +76,24 @@ export default function NewPostPage() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const { toast } = useToast()
+
+  // 🔥 카테고리 변경 시 작성자 자동 설정 함수
+  const handleCategoryChange = (selectedCategory: string) => {
+    setCategory(selectedCategory)
+    
+    // 카테고리에 맞는 작성자 자동 설정
+    const defaultAuthor = CATEGORY_AUTHOR_MAP[selectedCategory]
+    if (defaultAuthor) {
+      setAuthor(defaultAuthor)
+      
+      // 사용자에게 알림
+      toast({
+        title: "작성자 자동 설정",
+        description: `${selectedCategory} 카테고리에 맞게 작성자가 "${defaultAuthor}"로 설정되었습니다.`,
+        duration: 3000,
+      })
+    }
+  }
 
   // 카테고리 데이터 로드
   useEffect(() => {
@@ -1261,13 +1289,17 @@ export default function NewPostPage() {
                     <SelectValue placeholder="작성자 선택" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="픽틈 헬스·라이프팀">픽틈 헬스·라이프팀</SelectItem>
                     <SelectItem value="픽틈 스포츠이슈팀">픽틈 스포츠이슈팀</SelectItem>
                     <SelectItem value="픽틈 정치·시사팀">픽틈 정치·시사팀</SelectItem>
                     <SelectItem value="픽틈 경제·산업팀">픽틈 경제·산업팀</SelectItem>
-                    <SelectItem value="픽틈 헬스·라이프팀">픽틈 헬스·라이프팀</SelectItem>
                     <SelectItem value="픽틈 IT·테크팀">픽틈 IT·테크팀</SelectItem>
                   </SelectContent>
                 </Select>
+                {/* 🔥 자동 설정 안내 텍스트 추가 */}
+                <p className="text-xs text-gray-500">
+                  카테고리 선택 시 자동으로 해당 팀 작성자가 설정됩니다.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -1292,7 +1324,7 @@ export default function NewPostPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="category">카테고리</Label>
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="카테고리 선택" />
                   </SelectTrigger>
