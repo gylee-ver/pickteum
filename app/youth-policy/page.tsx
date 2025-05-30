@@ -84,7 +84,7 @@ export default function YouthPolicyPage() {
                 <p className="text-sm text-[#333333] leading-relaxed">
                   스튜디오시운(이하 "회사")은 청소년이 건전한 인격체로 성장할 수 있도록 청소년에게 유해한 매체물로부터 청소년을 보호하는 것을 목적으로 본 정책을 수립합니다. 
                   픽틈 서비스를 통해 제공되는 모든 콘텐츠가 청소년에게 안전하고 교육적 가치를 제공할 수 있도록 최선을 다하겠습니다.
-                </p>
+              </p>
               </CardContent>
             </Card>
 
@@ -96,7 +96,7 @@ export default function YouthPolicyPage() {
               <CardContent>
                 <p className="text-sm text-[#333333] leading-relaxed mb-3">
                   본 정책은 다음 법령에 근거하여 수립되었습니다:
-                </p>
+              </p>
                 <ul className="space-y-2 text-sm text-[#333333]">
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-[#FFC83D] rounded-full mt-2 mr-3 flex-shrink-0"></span>
@@ -110,7 +110,7 @@ export default function YouthPolicyPage() {
                     <span className="w-2 h-2 bg-[#FFC83D] rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     「방송통신심의위원회 심의규정」
                   </li>
-                </ul>
+              </ul>
               </CardContent>
             </Card>
 
@@ -187,13 +187,13 @@ export default function YouthPolicyPage() {
                     <div className="flex justify-between">
                       <span className="text-[#767676]">부서명</span>
                       <span className="text-[#212121] font-medium">콘텐츠관리팀</span>
-                    </div>
-                  </div>
-                  <Separator />
-                  <p className="text-sm text-[#333333] leading-relaxed">
-                    청소년보호책임자는 청소년 유해정보로부터 청소년을 보호하고 청소년의 안전한 인터넷 이용환경을 조성하기 위한 각종 정책을 수립·시행합니다.
-                  </p>
                 </div>
+              </div>
+                  <Separator />
+                <p className="text-sm text-[#333333] leading-relaxed">
+                  청소년보호책임자는 청소년 유해정보로부터 청소년을 보호하고 청소년의 안전한 인터넷 이용환경을 조성하기 위한 각종 정책을 수립·시행합니다.
+                </p>
+              </div>
               </CardContent>
             </Card>
 
@@ -240,7 +240,7 @@ export default function YouthPolicyPage() {
                       <li>• 신고된 내용은 24시간 이내에 검토하여 조치</li>
                       <li>• 중대한 사안의 경우 즉시 임시조치 후 상세검토 진행</li>
                       <li>• 처리 결과는 신고자에게 개별 통보</li>
-                    </ul>
+                  </ul>
                   </div>
                 </div>
               </CardContent>
@@ -276,7 +276,7 @@ export default function YouthPolicyPage() {
                     <li className="flex items-start">
                       <span className="w-2 h-2 bg-[#FFC83D] rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       정기적인 이용내역 점검 및 소통
-                    </li>
+                </li>
                   </ul>
                 </div>
               </CardContent>
@@ -295,7 +295,7 @@ export default function YouthPolicyPage() {
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-sm font-medium text-[#212121] mb-1">한국인터넷진흥원</p>
                   <p className="text-xs text-[#333333]">전화: 118 | 홈페이지: www.kisa.or.kr</p>
-                </div>
+              </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-sm font-medium text-[#212121] mb-1">청소년사이버상담센터</p>
                   <p className="text-xs text-[#333333]">전화: 1388 | 홈페이지: www.kyci.or.kr</p>

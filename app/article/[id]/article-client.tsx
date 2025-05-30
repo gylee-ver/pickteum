@@ -13,6 +13,7 @@ import { ko } from "date-fns/locale"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
+import { getImageUrl } from "@/lib/utils"
 
 interface ArticleClientProps {
   articleId: string
@@ -261,11 +262,12 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
             {/* 썸네일 이미지 */}
             <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-6">
               <Image
-                src={article.thumbnail || "/placeholder.svg"}
-                alt={article.title}
+                src={getImageUrl(article.thumbnail)}
+                alt={article.thumbnail_alt || article.title}
                 fill
                 className="object-cover"
                 priority
+                sizes="100vw"
               />
             </div>
 

@@ -218,7 +218,7 @@ export default function MediaLibraryPage() {
   const loadFilesFromFolder = async (folderPath: string = ''): Promise<MediaFile[]> => {
     try {
       console.log(`폴더 조회 시작: "${folderPath}"`)
-      
+
       // Storage API 호출 시 에러 처리 강화
       const { data: files, error } = await supabase.storage
         .from('article-thumbnails')
@@ -326,9 +326,9 @@ export default function MediaLibraryPage() {
           loadFilesFromFolder(subFolder).catch(error => {
             console.error(`하위 폴더 ${subFolder} 처리 실패:`, error)
             return [] // 실패한 폴더는 빈 배열 반환
-          })
-        )
-        
+        })
+      )
+
         const subFolderResults = await Promise.all(subFolderPromises)
         subFolderResults.forEach(subFolderFiles => {
           mediaFiles.push(...subFolderFiles)

@@ -390,46 +390,46 @@ export default function DashboardPage() {
       <div className="space-y-6">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
-          <div>
+        <div>
             <h1 className="text-2xl font-bold text-[#212121]">대시보드</h1>
             <p className="text-[#767676]">안녕하세요, {userName}님! 📊</p>
-          </div>
+        </div>
           <Button onClick={() => router.push("/admin/posts/new")} className="bg-[#FFC83D] hover:bg-[#FFB800]">
             <Plus className="mr-2 h-4 w-4" />새 글 작성
-          </Button>
-        </div>
+        </Button>
+      </div>
 
         {/* 통계 카드 */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
+        <StatCard
             title="오늘 방문자"
-            value={MOCK_ANALYTICS.today.visitors.toLocaleString()}
-            change={MOCK_ANALYTICS.today.change.visitors}
-            icon={Users}
-            trend="up"
-          />
-          <StatCard
-            title="페이지뷰"
-            value={MOCK_ANALYTICS.today.pageviews.toLocaleString()}
-            change={MOCK_ANALYTICS.today.change.pageviews}
+          value={MOCK_ANALYTICS.today.visitors.toLocaleString()}
+          change={MOCK_ANALYTICS.today.change.visitors}
+          icon={Users}
+          trend="up"
+        />
+        <StatCard
+          title="페이지뷰"
+          value={MOCK_ANALYTICS.today.pageviews.toLocaleString()}
+          change={MOCK_ANALYTICS.today.change.pageviews}
             icon={BarChart3}
-            trend="up"
-          />
-          <StatCard
-            title="평균 체류시간"
-            value={MOCK_ANALYTICS.today.avgTime}
-            change={MOCK_ANALYTICS.today.change.avgTime}
-            icon={Clock}
-            trend="up"
-          />
-          <StatCard
-            title="이탈률"
-            value={MOCK_ANALYTICS.today.bounceRate}
+          trend="up"
+        />
+        <StatCard
+          title="평균 체류시간"
+          value={MOCK_ANALYTICS.today.avgTime}
+          change={MOCK_ANALYTICS.today.change.avgTime}
+          icon={Clock}
+          trend="up"
+        />
+        <StatCard
+          title="이탈률"
+          value={MOCK_ANALYTICS.today.bounceRate}
             change={MOCK_ANALYTICS.today.change.bounceRate}
             icon={TrendingDown}
-            trend="down"
-          />
-        </div>
+          trend="down"
+        />
+      </div>
 
         {/* 차트 섹션 */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -513,14 +513,14 @@ export default function DashboardPage() {
                       className="flex items-start group cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
                       onClick={() => handleViewArticle(content.id)}
                     >
-                      <div className="mr-3 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-medium">
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 space-y-1">
+                    <div className="mr-3 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-medium">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 space-y-1">
                         <p className="text-sm font-medium leading-none group-hover:text-[#FFC83D] transition-colors line-clamp-2">
-                          {content.title}
-                        </p>
-                        <div className="flex flex-wrap items-center text-xs text-gray-500 gap-2">
+                        {content.title}
+                      </p>
+                      <div className="flex flex-wrap items-center text-xs text-gray-500 gap-2">
                           <Badge 
                             variant="outline" 
                             className="rounded-full text-xs font-normal"
@@ -529,8 +529,8 @@ export default function DashboardPage() {
                               color: content.categoryColor 
                             }}
                           >
-                            {content.category}
-                          </Badge>
+                          {content.category}
+                        </Badge>
                           <span className="font-medium text-blue-600">
                             {content.views.toLocaleString()} 조회
                           </span>

@@ -67,7 +67,7 @@ export default function ContentFeed() {
   useEffect(() => {
     // categories가 로드된 후에만 loadArticles 실행
     if (categories.length > 0 || activeCategory === '전체') {
-      loadArticles()
+    loadArticles()
     }
   }, [activeCategory, page, categories])
 
@@ -228,18 +228,18 @@ export default function ContentFeed() {
   return (
     <div className="w-full relative">
       <PickteumTracker isHomePage={true} />
-      <div className="grid gap-4">
-        {displayedContent.map((item) => (
-          <ContentCard key={item.id} {...item} />
-        ))}
-        {loading && (
-          <>
-            <Skeleton className="h-[120px] w-full rounded-lg" />
-            <Skeleton className="h-[120px] w-full rounded-lg" />
-          </>
-        )}
-      </div>
-      <ScrollButton />
+        <div className="grid gap-4">
+          {displayedContent.map((item) => (
+            <ContentCard key={item.id} {...item} />
+          ))}
+          {loading && (
+            <>
+              <Skeleton className="h-[120px] w-full rounded-lg" />
+              <Skeleton className="h-[120px] w-full rounded-lg" />
+            </>
+          )}
+        </div>
+        <ScrollButton />
     </div>
   )
 }
