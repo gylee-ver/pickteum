@@ -191,27 +191,10 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
     setIsCopied(false)
   }
 
-  // 스마트 뒤로가기 핸들러
+  // 🔥 간단한 홈 이동 핸들러로 변경
   const handleBackNavigation = () => {
-    if (typeof window !== 'undefined') {
-      const referrer = document.referrer
-      
-      // 같은 도메인의 /s/ 경로에서 온 경우 또는 히스토리가 1개만 있는 경우 홈으로
-      if (referrer.includes('/s/') || window.history.length <= 1) {
-        router.push('/')
-        return
-      }
-      
-      // 그 외의 경우 뒤로가기 시도
-      try {
-        router.back()
-      } catch {
-        // 뒤로가기 실패 시 홈으로
-        router.push('/')
-      }
-    } else {
-      router.push('/')
-    }
+    console.log('🏠 홈페이지로 이동')
+    router.push('/')
   }
 
   if (loading) {
