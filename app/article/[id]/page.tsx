@@ -4,6 +4,7 @@ import supabase from "@/lib/supabase"
 import ArticleClient from './article-client'
 import ArticleSchema from '@/components/article-schema'
 import { RedirectType } from 'next/navigation'
+import { generateSocialMeta, getDefaultMetadata, validateImageUrl } from '@/lib/social-meta'
 
 // 강제 동적 렌더링
 export const dynamic = 'force-dynamic'
@@ -38,22 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .single()
 
     if (error || !article) {
-      return {
-        title: '픽틈 - 틈새시간을 이슈충전 타임으로',
-        description: '요청하신 콘텐츠를 찾을 수 없습니다.',
-        openGraph: {
-          title: '픽틈 - 틈새시간을 이슈충전 타임으로',
-          description: '틈새 시간을, 이슈 충전 타임으로!',
-          type: 'website',
-          images: [
-            {
-              url: 'https://www.pickteum.com/pickteum_og.png',
-              width: 1200,
-              height: 630,
-            }
-          ]
-        }
-      }
+      return getDefaultMetadata()
     }
 
     // SEO에 최적화된 제목 생성
@@ -83,52 +69,57 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const limitedKeywords = keywordsString.length > 250 ? 
       keywordsString.substring(0, 247) + '...' : keywordsString
     
-    // 썸네일 URL 처리 (절대경로 보장)
+    // 썸네일 URL 처리 및 검증
     let thumbnailUrl = 'https://www.pickteum.com/pickteum_og.png'
+    
     if (article.thumbnail) {
+      let candidateUrl = ''
+      
+      // URL 형식 확인 및 변환
       if (article.thumbnail.startsWith('http')) {
-        thumbnailUrl = article.thumbnail
+        candidateUrl = article.thumbnail
       } else if (article.thumbnail.startsWith('/')) {
-        thumbnailUrl = `https://www.pickteum.com${article.thumbnail}`
+        candidateUrl = `https://www.pickteum.com${article.thumbnail}`
       } else {
-        thumbnailUrl = `https://www.pickteum.com/${article.thumbnail}`
+        candidateUrl = `https://www.pickteum.com/${article.thumbnail}`
+      }
+      
+      // 이미지 접근성 검증 (타임아웃 적용)
+      try {
+        const isValid = await Promise.race([
+          validateImageUrl(candidateUrl),
+          new Promise<boolean>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ])
+        
+        if (isValid) {
+          thumbnailUrl = candidateUrl
+        }
+      } catch (error) {
+        console.warn('썸네일 검증 실패, 기본 이미지 사용:', error)
+        // 기본 이미지 사용 (이미 설정됨)
       }
     }
 
-    const metadata: Metadata = {
+    // 소셜 메타데이터 생성
+    const socialMeta = generateSocialMeta({
       title: titleWithCategory,
       description: seoDescription,
+      imageUrl: thumbnailUrl,
+      url: `https://www.pickteum.com/article/${id}`,
+      type: 'article',
+      publishedTime: article.published_at || article.created_at,
+      modifiedTime: article.updated_at,
+      author: article.author || '픽틈',
+      section: categoryName,
+    })
+
+    // 기존 메타데이터 구조 유지하면서 소셜 메타데이터 통합
+    const metadata: Metadata = {
+      ...socialMeta,
       keywords: limitedKeywords,
       authors: [{ name: article.author || '픽틈' }],
-      openGraph: {
-        title: titleWithCategory,
-        description: seoDescription,
-        type: 'article',
-        publishedTime: article.published_at || article.created_at,
-        modifiedTime: article.updated_at,
-        authors: [article.author || '픽틈'],
-        section: categoryName,
-        tags: Array.isArray(article.tags) ? article.tags : [],
-        images: [
-          {
-            url: thumbnailUrl,
-            width: 1200,
-            height: 630,
-            alt: titleWithCategory,
-          },
-        ],
-        url: `https://www.pickteum.com/article/${id}`,
-        siteName: '픽틈',
-        locale: 'ko_KR',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: titleWithCategory,
-        description: seoDescription,
-        images: [thumbnailUrl],
-        creator: '@pickteum',
-        site: '@pickteum',
-      },
       alternates: {
         canonical: `https://www.pickteum.com/article/${article.slug || id}`,
       },
@@ -137,27 +128,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return metadata
 
   } catch (error) {
+    console.error('메타데이터 생성 오류:', error)
     // 치명적 오류시에도 기본 메타데이터 반환 (절대 실패하지 않음)
-    return {
-      title: '틈 날 땐? 픽틈!',
-      description: '틈새 시간을, 이슈 충전 타임으로!',
-      openGraph: {
-        title: '틈 날 땐? 픽틈!',
-        description: '틈새 시간을, 이슈 충전 타임으로!',
-        type: 'website',
-        images: [
-          {
-            url: 'https://www.pickteum.com/pickteum_og.png',
-            width: 1200,
-            height: 630,
-            alt: '틈 날 땐? 픽틈!',
-          },
-        ],
-        url: 'https://www.pickteum.com',
-        siteName: '픽틈',
-        locale: 'ko_KR',
-      },
-    }
+    return getDefaultMetadata()
   }
 }
 
