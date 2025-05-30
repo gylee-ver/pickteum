@@ -247,8 +247,12 @@ export default function ContentFeed() {
     <div className="w-full relative">
       <PickteumTracker isHomePage={true} />
         <div className="grid gap-4">
-          {displayedContent.map((item) => (
-            <ContentCard key={item.id} {...item} />
+          {displayedContent.map((item, index) => (
+            <ContentCard 
+              key={item.id} 
+              {...item} 
+              priority={index === 0}
+            />
           ))}
           {loading && (
             <>

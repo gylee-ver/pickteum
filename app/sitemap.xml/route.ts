@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import supabase from '@/lib/supabase'
 
+const POSTS_PER_PAGE = 20
+
 export async function GET() {
   try {
     // 발행된 아티클 조회
@@ -14,6 +16,12 @@ export async function GET() {
       console.error('사이트맵 아티클 조회 오류:', error)
     }
 
+    // 전체 아티클 수 조회
+    const { count } = await supabase
+      .from('articles')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'published')
+
     // 카테고리 조회
     const { data: categories } = await supabase
       .from('categories')
@@ -21,6 +29,7 @@ export async function GET() {
 
     const baseUrl = 'https://www.pickteum.com'
     const currentDate = new Date().toISOString()
+    const totalPages = Math.ceil((count || 0) / POSTS_PER_PAGE)
 
     // XML 생성
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -32,6 +41,19 @@ export async function GET() {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  
+  <!-- 페이지네이션 -->
+  ${Array.from({ length: Math.min(totalPages, 50) }, (_, i) => { // 최대 50페이지까지만
+    const page = i + 1
+    if (page === 1) return '' // 홈페이지와 중복 방지
+    
+    return `  <url>
+    <loc>${baseUrl}/page/${page}</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`
+  }).join('\n')}
   
   <!-- 정적 페이지 -->
   <url>
@@ -58,55 +80,53 @@ export async function GET() {
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-
-  <!-- 카테고리 페이지 -->
-  ${categories?.map(category => `
   <url>
+    <loc>${baseUrl}/contact</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- 카테고리 페이지 -->
+  ${categories?.map(category => `  <url>
     <loc>${baseUrl}/category/${encodeURIComponent(category.name)}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
-  </url>`).join('') || ''}
-
+  </url>`).join('\n') || ''}
+  
   <!-- 아티클 페이지 -->
   ${articles?.map(article => {
+    const url = article.slug ? 
+      `${baseUrl}/article/${article.slug}` : 
+      `${baseUrl}/article/${article.id}`
     const lastmod = article.updated_at || article.published_at || article.created_at
-    return `
-  <url>
-    <loc>${baseUrl}/article/${article.slug || article.id}</loc>
-    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    
+    return `  <url>
+    <loc>${url}</loc>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>`
-  }).join('') || ''}
+  }).join('\n') || ''}
+  
+  <!-- RSS 피드 -->
+  <url>
+    <loc>${baseUrl}/feed.xml</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>`
 
     return new NextResponse(sitemap, {
       headers: {
-        'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600', // 1시간 캐시
       },
     })
-
   } catch (error) {
     console.error('사이트맵 생성 오류:', error)
-    
-    // 오류 시 기본 사이트맵 반환
-    const basicSitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://www.pickteum.com</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-</urlset>`
-
-    return new NextResponse(basicSitemap, {
-      headers: {
-        'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=300',
-      },
-    })
+    return new NextResponse('Internal Server Error', { status: 500 })
   }
 } 

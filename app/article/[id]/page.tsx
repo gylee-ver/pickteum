@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import supabase from "@/lib/supabase"
 import ArticleClient from './article-client'
+import ArticleSchema from '@/components/article-schema'
 
 // 강제 동적 렌더링
 export const dynamic = 'force-dynamic'
@@ -11,13 +12,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   try {
     const { id } = await params
     
-    // 가장 안전한 쿼리 (조인 없이)
+    // 카테고리 정보도 함께 가져오기
     const { data: article, error } = await supabase
       .from('articles')
       .select(`
         id,
         title,
         content,
+        summary,
         thumbnail,
         seo_title,
         seo_description,
@@ -27,19 +29,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         published_at,
         created_at,
         updated_at,
-        category_id
+        category_id,
+        category:categories(name)
       `)
       .or(`slug.eq.${id},id.eq.${id}`)
       .eq('status', 'published')
       .single()
 
     if (error || !article) {
-      // 에러시에도 기본 메타데이터 반환
       return {
-        title: '틈 날 땐? 픽틈!',
+        title: '픽틈 - 틈새시간을 이슈충전 타임으로',
         description: '요청하신 콘텐츠를 찾을 수 없습니다.',
         openGraph: {
-          title: '틈 날 땐? 픽틈!',
+          title: '픽틈 - 틈새시간을 이슈충전 타임으로',
           description: '틈새 시간을, 이슈 충전 타임으로!',
           type: 'website',
           images: [
@@ -47,64 +49,47 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
               url: 'https://www.pickteum.com/pickteum_og.png',
               width: 1200,
               height: 630,
-              alt: '틈 날 땐? 픽틈!',
-            },
-          ],
-          url: 'https://www.pickteum.com',
-          siteName: '픽틈',
-          locale: 'ko_KR',
-        },
-      }
-    }
-
-    // 카테고리 정보 별도 조회 (실패해도 계속 진행)
-    let categoryName = '미분류'
-    try {
-      if (article.category_id) {
-        const { data: category } = await supabase
-          .from('categories')
-          .select('name')
-          .eq('id', article.category_id)
-          .single()
-        
-        if (category) {
-          categoryName = category.name
+            }
+          ]
         }
       }
-    } catch (catError) {
-      // 카테고리 조회 실패는 무시
     }
 
-    // 안전한 메타데이터 구성
-    const title = (article.seo_title || article.title || '픽틈').trim()
-    const description = (article.seo_description || 
-      (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '') ||
-      '픽틈에서 제공하는 유익한 콘텐츠입니다.').trim()
+    // SEO에 최적화된 제목 생성
+    const seoTitle = article.seo_title || article.title
+    const categoryName = (article.category as any)?.name
+    const titleWithCategory = categoryName ? `${seoTitle} - ${categoryName}` : seoTitle
     
-    // 안전한 이미지 URL 처리
-    let imageUrl = 'https://www.pickteum.com/pickteum_og.png'
-    try {
-      if (article.thumbnail && typeof article.thumbnail === 'string') {
-        if (article.thumbnail.startsWith('http')) {
-          imageUrl = article.thumbnail
-        } else if (article.thumbnail.startsWith('/')) {
-          imageUrl = `https://www.pickteum.com${article.thumbnail}`
-        } else {
-          imageUrl = `https://www.pickteum.com/${article.thumbnail}`
-        }
-      }
-    } catch (imgError) {
-      // 이미지 URL 처리 오류 시 기본값 사용
+    // SEO에 최적화된 설명 생성
+    let seoDescription = article.seo_description || article.summary
+    if (!seoDescription && article.content) {
+      // HTML 태그 제거 후 첫 160자 추출
+      const plainText = article.content.replace(/<[^>]*>/g, '').trim()
+      seoDescription = plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')
     }
+    seoDescription = seoDescription || '픽틈에서 제공하는 유익한 콘텐츠입니다.'
+    
+    // 키워드 생성 (제목과 카테고리, 태그 조합)
+    const keywords = ['픽틈', 'pickteum', '뉴스', '정보']
+    if (categoryName) keywords.push(`${categoryName}뉴스`, categoryName)
+    if (article.tags) {
+      const tagArray = typeof article.tags === 'string' ? article.tags.split(',') : article.tags
+      keywords.push(...(tagArray as string[]).map((tag: string) => tag.trim()))
+    }
+    
+    // 썸네일 URL 처리
+    const thumbnailUrl = article.thumbnail 
+      ? `https://www.pickteum.com${article.thumbnail}`
+      : 'https://www.pickteum.com/pickteum_og.png'
 
     const metadata: Metadata = {
-      title: `${title} | 픽틈`,
-      description,
-      keywords: Array.isArray(article.tags) ? article.tags.join(', ') : '',
+      title: titleWithCategory,
+      description: seoDescription,
+      keywords: keywords.join(', '),
       authors: [{ name: article.author || '픽틈' }],
       openGraph: {
-        title: title,
-        description: description,
+        title: titleWithCategory,
+        description: seoDescription,
         type: 'article',
         publishedTime: article.published_at || article.created_at,
         modifiedTime: article.updated_at,
@@ -113,10 +98,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         tags: Array.isArray(article.tags) ? article.tags : [],
         images: [
           {
-            url: imageUrl,
+            url: thumbnailUrl,
             width: 1200,
             height: 630,
-            alt: title,
+            alt: titleWithCategory,
           },
         ],
         url: `https://www.pickteum.com/article/${id}`,
@@ -125,9 +110,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
       twitter: {
         card: 'summary_large_image',
-        title: title,
-        description: description,
-        images: [imageUrl],
+        title: titleWithCategory,
+        description: seoDescription,
+        images: [thumbnailUrl],
         creator: '@pickteum',
         site: '@pickteum',
       },
@@ -165,45 +150,34 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 // 서버 컴포넌트 (기존과 동일하지만 에러 처리 강화)
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    
-    // 안전한 아티클 데이터 로딩
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select(`
-        id,
-        title,
-        content,
-        thumbnail,
-        seo_title,
-        seo_description,
-        author,
-        tags,
-        slug,
-        published_at,
-        created_at,
-        updated_at,
-        views,
-        category_id,
-        category:categories(id, name, color)
-      `)
-      .or(`slug.eq.${id},id.eq.${id}`)
-      .eq('status', 'published')
-      .single()
-
-    if (error || !article) {
-      notFound()
-    }
-
-    return (
-      <ArticleClient 
-        articleId={article.id} 
-        initialArticle={article} 
-      />
-    )
-
-  } catch (error) {
+  const { id } = await params
+  
+  if (!id || typeof id !== 'string') {
     notFound()
   }
+
+  const { data: article, error } = await supabase
+    .from('articles')
+    .select('*, category:categories(*)')
+    .eq('id', id)
+    .eq('status', 'published')
+    .single()
+
+  if (error || !article) {
+    notFound()
+  }
+
+  // 조회수 증가 (백그라운드)
+  supabase
+    .from('articles')
+    .update({ views: (article.views || 0) + 1 })
+    .eq('id', id)
+    .then()
+
+  return (
+    <>
+      <ArticleSchema article={article} />
+      <ArticleClient articleId={id} initialArticle={article} />
+    </>
+  )
 }
