@@ -30,6 +30,19 @@ const FALLBACK_CONTENT = [
   },
 ]
 
+// 이미지 프리로딩 함수
+const preloadImages = (imageUrls: string[]) => {
+  imageUrls.forEach(url => {
+    if (url && typeof window !== 'undefined') {
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = url
+      document.head.appendChild(link)
+    }
+  })
+}
+
 export default function ContentFeed() {
   const { activeCategory } = useCategory()
   const [content, setContent] = useState<any[]>([])
@@ -96,12 +109,10 @@ export default function ContentFeed() {
       
       // 카테고리 필터링
       if (activeCategory !== '전체') {
-        // 카테고리 ID 찾기
         const categoryId = categories.find(cat => cat.name === activeCategory)?.id
         if (categoryId) {
           query = query.eq('category_id', categoryId)
         } else {
-          // 카테고리 ID를 찾지 못한 경우 빈 결과 반환
           logger.warn(`카테고리 "${activeCategory}"의 ID를 찾을 수 없습니다.`)
           setContent([])
           setLoading(false)
@@ -122,6 +133,7 @@ export default function ContentFeed() {
       
       // 아티클 데이터 변환
       const formattedData = data.map(article => {
+        const imageUrl = getImageUrl(article.thumbnail)
         return {
           id: article.id,
           title: article.title,
@@ -129,12 +141,18 @@ export default function ContentFeed() {
             name: article.categories?.name || '미분류',
             color: article.categories?.color || '#cccccc'
           },
-          thumbnail: getImageUrl(article.thumbnail),
+          thumbnail: imageUrl,
           date: article.published_at ? 
             format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
             format(new Date(), 'yyyy.MM.dd', { locale: ko })
         }
       })
+      
+      // 첫 페이지 이미지들 프리로딩
+      if (page === 1) {
+        const imageUrls = formattedData.slice(0, 3).map(item => item.thumbnail)
+        preloadImages(imageUrls)
+      }
       
       if (page === 1) {
         setContent(formattedData)

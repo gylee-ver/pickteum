@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { getImageUrl } from "@/lib/utils"
+import { useState } from "react"
 
 interface ContentCardProps {
   id: string
@@ -14,6 +15,8 @@ interface ContentCardProps {
 }
 
 export default function ContentCard({ id, title, category, thumbnail, date }: ContentCardProps) {
+  const [imageError, setImageError] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const processedUrl = getImageUrl(thumbnail)
   
   return (
@@ -31,19 +34,36 @@ export default function ContentCard({ id, title, category, thumbnail, date }: Co
 
         <h3 className="text-base font-semibold text-[#212121] line-clamp-2 mb-2">{title}</h3>
 
-        <div className="relative w-full aspect-video rounded-lg overflow-hidden">
-          <img 
-            src={processedUrl} 
-            alt={title} 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              console.error('이미지 로드 실패:', processedUrl)
-              e.currentTarget.src = '/placeholder.svg'
-            }}
-            onLoad={() => {
-              console.log('이미지 로드 성공:', processedUrl)
-            }}
-          />
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+          {/* 로딩 스켈레톤 */}
+          {!imageLoaded && !imageError && (
+            <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+              <div className="w-8 h-8 bg-gray-300 rounded"></div>
+            </div>
+          )}
+          
+          {!imageError ? (
+            <Image
+              src={processedUrl}
+              alt={title}
+              fill
+              className={`object-cover transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 33vw"
+              quality={75}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                console.error('이미지 로드 실패:', processedUrl)
+                setImageError(true)
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <div className="text-gray-400 text-sm">이미지 없음</div>
+            </div>
+          )}
         </div>
       </div>
     </Link>
