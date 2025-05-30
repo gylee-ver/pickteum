@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Facebook, Instagram, Twitter, Youtube } from "lucide-react"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -90,22 +89,8 @@ export default function Footer() {
           <p className="text-xs text-[#767676] mb-2">통신판매업 신고번호: 2025-서울금천-0961</p>
         </div>
 
-        {/* 소셜 미디어 및 정책 링크 */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-          <div className="flex space-x-4 mb-4 md:mb-0">
-            <Link href="https://facebook.com" aria-label="Facebook" className="text-[#767676] hover:text-[#FFC83D]">
-              <Facebook size={20} />
-            </Link>
-            <Link href="https://instagram.com" aria-label="Instagram" className="text-[#767676] hover:text-[#FFC83D]">
-              <Instagram size={20} />
-            </Link>
-            <Link href="https://twitter.com" aria-label="Twitter" className="text-[#767676] hover:text-[#FFC83D]">
-              <Twitter size={20} />
-            </Link>
-            <Link href="https://youtube.com" aria-label="YouTube" className="text-[#767676] hover:text-[#FFC83D]">
-              <Youtube size={20} />
-            </Link>
-          </div>
+        {/* 정책 링크 */}
+        <div className="flex justify-center">
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href="/terms" className="text-xs text-[#767676] hover:text-[#FFC83D]">
               이용약관
