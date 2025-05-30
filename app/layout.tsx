@@ -32,7 +32,6 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(baseUrl),
   alternates: {
-    canonical: '/',
     types: {
       'application/rss+xml': [
         { url: '/feed.xml', title: '픽틈 RSS 피드' }

@@ -10,10 +10,32 @@ import { Metadata } from 'next'
 export const metadata: Metadata = {
   title: '문의하기',
   description: '픽틈에 대한 문의사항이나 제안사항을 보내주세요. 빠른 시일 내에 답변드리겠습니다.',
+  alternates: {
+    canonical: 'https://www.pickteum.com/contact',
+  },
   openGraph: {
     title: '문의하기 - 틈 날 땐? 픽틈!',
     description: '픽틈에 대한 문의사항이나 제안사항을 보내주세요. 빠른 시일 내에 답변드리겠습니다.',
     type: 'website',
+    url: 'https://www.pickteum.com/contact',
+    siteName: '픽틈',
+    images: [
+      {
+        url: 'https://www.pickteum.com/pickteum_og.png',
+        width: 1200,
+        height: 630,
+        alt: '문의하기 - 픽틈',
+      },
+    ],
+    locale: 'ko_KR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '문의하기 - 틈 날 땐? 픽틈!',
+    description: '픽틈에 대한 문의사항이나 제안사항을 보내주세요. 빠른 시일 내에 답변드리겠습니다.',
+    images: ['https://www.pickteum.com/pickteum_og.png'],
+    creator: '@pickteum',
+    site: '@pickteum',
   },
 }
 

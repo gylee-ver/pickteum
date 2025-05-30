@@ -13,13 +13,69 @@ import PickteumTracker from '@/components/analytics/pickteum-tracker'
 export async function generateMetadata({ params }: { params: { name: string } }): Promise<Metadata> {
   const categoryName = decodeURIComponent(params.name)
   
+  // 카테고리 존재 여부와 아티클 수 확인
+  const { data: category, error: categoryError } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('name', categoryName)
+    .single()
+
+  if (categoryError || !category) {
+    return {
+      title: '카테고리를 찾을 수 없습니다',
+      description: '요청하신 카테고리를 찾을 수 없습니다.',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
+
+  // 해당 카테고리의 아티클 수 확인
+  const { count } = await supabase
+    .from('articles')
+    .select('*', { count: 'exact', head: true })
+    .eq('category_id', category.id)
+    .eq('status', 'published')
+
+  const hasArticles = (count || 0) > 0
+
   return {
     title: `${categoryName}`,
     description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+    alternates: {
+      canonical: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
+    },
+    robots: hasArticles ? {
+      index: true,
+      follow: true,
+    } : {
+      index: false,
+      follow: true,
+    },
     openGraph: {
       title: `${categoryName} - 틈 날 땐? 픽틈!`,
       description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
       type: 'website',
+      url: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
+      siteName: '픽틈',
+      images: [
+        {
+          url: 'https://www.pickteum.com/pickteum_og.png',
+          width: 1200,
+          height: 630,
+          alt: `${categoryName} - 픽틈`,
+        },
+      ],
+      locale: 'ko_KR',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${categoryName} - 틈 날 땐? 픽틈!`,
+      description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+      images: ['https://www.pickteum.com/pickteum_og.png'],
+      creator: '@pickteum',
+      site: '@pickteum',
     },
   }
 }

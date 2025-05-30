@@ -1,8 +1,9 @@
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import supabase from "@/lib/supabase"
 import ArticleClient from './article-client'
 import ArticleSchema from '@/components/article-schema'
+import { RedirectType } from 'next/navigation'
 
 // 강제 동적 렌더링
 export const dynamic = 'force-dynamic'
@@ -77,15 +78,27 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       keywords.push(...(tagArray as string[]).map((tag: string) => tag.trim()))
     }
     
-    // 썸네일 URL 처리
-    const thumbnailUrl = article.thumbnail 
-      ? `https://www.pickteum.com${article.thumbnail}`
-      : 'https://www.pickteum.com/pickteum_og.png'
+    // 키워드를 250자로 제한
+    const keywordsString = keywords.join(', ')
+    const limitedKeywords = keywordsString.length > 250 ? 
+      keywordsString.substring(0, 247) + '...' : keywordsString
+    
+    // 썸네일 URL 처리 (절대경로 보장)
+    let thumbnailUrl = 'https://www.pickteum.com/pickteum_og.png'
+    if (article.thumbnail) {
+      if (article.thumbnail.startsWith('http')) {
+        thumbnailUrl = article.thumbnail
+      } else if (article.thumbnail.startsWith('/')) {
+        thumbnailUrl = `https://www.pickteum.com${article.thumbnail}`
+      } else {
+        thumbnailUrl = `https://www.pickteum.com/${article.thumbnail}`
+      }
+    }
 
     const metadata: Metadata = {
       title: titleWithCategory,
       description: seoDescription,
-      keywords: keywords.join(', '),
+      keywords: limitedKeywords,
       authors: [{ name: article.author || '픽틈' }],
       openGraph: {
         title: titleWithCategory,
@@ -156,12 +169,44 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     notFound()
   }
 
-  const { data: article, error } = await supabase
-    .from('articles')
-    .select('*, category:categories(*)')
-    .eq('id', id)
-    .eq('status', 'published')
-    .single()
+  // 먼저 slug로 조회 시도
+  let article, error
+  
+  // 숫자로만 이루어진 ID인 경우 (기존 ID 방식)
+  const isNumericId = /^\d+$/.test(id)
+  
+  if (isNumericId) {
+    // ID로 조회하여 slug 확인
+    const { data: articleData, error: articleError } = await supabase
+      .from('articles')
+      .select('*, category:categories(*)')
+      .eq('id', id)
+      .eq('status', 'published')
+      .single()
+    
+    if (articleError || !articleData) {
+      notFound()
+    }
+    
+    // slug가 있으면 slug URL로 리디렉트
+    if (articleData.slug && articleData.slug !== id) {
+      redirect(`/article/${articleData.slug}`, RedirectType.replace)
+    }
+    
+    article = articleData
+    error = articleError
+  } else {
+    // slug 또는 ID로 조회
+    const { data: articleData, error: articleError } = await supabase
+      .from('articles')
+      .select('*, category:categories(*)')
+      .or(`slug.eq.${id},id.eq.${id}`)
+      .eq('status', 'published')
+      .single()
+    
+    article = articleData
+    error = articleError
+  }
 
   if (error || !article) {
     notFound()
@@ -171,7 +216,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   supabase
     .from('articles')
     .update({ views: (article.views || 0) + 1 })
-    .eq('id', id)
+    .eq('id', article.id)
     .then()
 
   return (

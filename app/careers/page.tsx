@@ -7,10 +7,32 @@ import { Metadata } from 'next'
 export const metadata: Metadata = {
   title: '채용정보',
   description: '픽틈과 함께 성장할 인재를 찾습니다. 다양한 포지션의 채용 정보를 확인해보세요.',
+  alternates: {
+    canonical: 'https://www.pickteum.com/careers',
+  },
   openGraph: {
     title: '채용정보 - 틈 날 땐? 픽틈!',
     description: '픽틈과 함께 성장할 인재를 찾습니다. 다양한 포지션의 채용 정보를 확인해보세요.',
     type: 'website',
+    url: 'https://www.pickteum.com/careers',
+    siteName: '픽틈',
+    images: [
+      {
+        url: 'https://www.pickteum.com/pickteum_og.png',
+        width: 1200,
+        height: 630,
+        alt: '채용정보 - 픽틈',
+      },
+    ],
+    locale: 'ko_KR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '채용정보 - 틈 날 땐? 픽틈!',
+    description: '픽틈과 함께 성장할 인재를 찾습니다. 다양한 포지션의 채용 정보를 확인해보세요.',
+    images: ['https://www.pickteum.com/pickteum_og.png'],
+    creator: '@pickteum',
+    site: '@pickteum',
   },
 }
 

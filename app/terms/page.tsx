@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Metadata } from "next"
 
 export default function TermsPage() {
   return (
@@ -129,4 +130,36 @@ export default function TermsPage() {
       </div>
     </div>
   )
+}
+
+export const metadata: Metadata = {
+  title: '이용약관',
+  description: '픽틈 서비스 이용약관을 확인하세요.',
+  alternates: {
+    canonical: 'https://www.pickteum.com/terms',
+  },
+  openGraph: {
+    title: '이용약관 - 틈 날 땐? 픽틈!',
+    description: '픽틈 서비스 이용약관을 확인하세요.',
+    type: 'website',
+    url: 'https://www.pickteum.com/terms',
+    siteName: '픽틈',
+    images: [
+      {
+        url: 'https://www.pickteum.com/pickteum_og.png',
+        width: 1200,
+        height: 630,
+        alt: '이용약관 - 픽틈',
+      },
+    ],
+    locale: 'ko_KR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '이용약관 - 틈 날 땐? 픽틈!',
+    description: '픽틤 서비스 이용약관을 확인하세요.',
+    images: ['https://www.pickteum.com/pickteum_og.png'],
+    creator: '@pickteum',
+    site: '@pickteum',
+  },
 } 

@@ -4,6 +4,13 @@ import CategoryFilter from "@/components/category-filter"
 import Footer from "@/components/footer"
 import { CategoryProvider } from "@/contexts/category-context"
 import { generateWebsiteSchema, generateOrganizationSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/structured-data"
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: 'https://www.pickteum.com',
+  },
+}
 
 export default function Home() {
   // 🔥 구조화된 데이터 생성

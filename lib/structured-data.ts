@@ -95,12 +95,29 @@ export function generateOrganizationSchema() {
 
 // 🔥 아티클 스키마 생성 (기존 함수 개선)
 export function generateArticleSchema(article: Article) {
+  // 이미지 URL을 절대경로로 변환
+  let imageUrl = 'https://www.pickteum.com/pickteum_og.png'
+  if (article.thumbnail) {
+    if (article.thumbnail.startsWith('http')) {
+      imageUrl = article.thumbnail
+    } else if (article.thumbnail.startsWith('/')) {
+      imageUrl = `https://www.pickteum.com${article.thumbnail}`
+    } else {
+      imageUrl = `https://www.pickteum.com/${article.thumbnail}`
+    }
+  }
+
+  // keywords를 250자로 제한
+  const keywords = article.tags?.join(', ') || ''
+  const limitedKeywords = keywords.length > 250 ? 
+    keywords.substring(0, 247) + '...' : keywords
+
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     "headline": article.seo_title || article.title,
     "description": article.seo_description || article.content?.replace(/<[^>]*>/g, '').substring(0, 160),
-    "image": [article.thumbnail || '/pickteum_og.png'],
+    "image": [imageUrl],
     "author": {
       "@type": "Person",
       "name": article.author
@@ -121,7 +138,7 @@ export function generateArticleSchema(article: Article) {
     },
     "url": `https://www.pickteum.com/article/${article.slug}`,
     "articleSection": article.category?.name || '미분류',
-    "keywords": article.tags?.join(', ') || '',
+    "keywords": limitedKeywords,
     "wordCount": article.content ? article.content.replace(/<[^>]*>/g, '').length : 0,
     "genre": ["뉴스", "정보"],
     "about": {
