@@ -191,25 +191,12 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
     setIsCopied(false)
   }
 
-  // 🔥 간단한 홈 이동 핸들러로 변경
+  // 🔥 뒤로가기 핸들러를 완전히 간단하게 변경
   const handleBackNavigation = () => {
     console.log('🏠 홈페이지로 이동')
     
-    try {
-      // 1. 먼저 클라이언트 사이드 네비게이션 시도
-      router.push('/')
-      
-      // 2. 0.5초 후 여전히 빈 화면이면 강제 새로고침
-      setTimeout(() => {
-        if (document.body.children.length === 0 || 
-            document.querySelector('.content-feed')?.children.length === 0) {
-          window.location.href = '/'
-        }
-      }, 500)
-    } catch (error) {
-      // 3. 에러 시 즉시 강제 새로고침
-      window.location.href = '/'
-    }
+    // 직접 새로고침으로 이동 - 가장 확실한 방법
+    window.location.href = '/'
   }
 
   if (loading) {
