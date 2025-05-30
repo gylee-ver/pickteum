@@ -9,44 +9,76 @@ import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 // 강제 동적 렌더링
 // export const dynamic = 'force-dynamic'
 
-// 또는 static으로 변경
-export const dynamic = 'force-static'
+// 수정된 설정
+export const revalidate = 60 // 60초마다 재검증
+// 또는 완전히 제거
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🚀 generateMetadata 함수 시작')
-  
   try {
     const { id } = await params
-    console.log('🔍 메타데이터 생성 시작:', { id })
+    console.log('🔍 메타데이터 생성:', { id, userAgent: process.env.HTTP_USER_AGENT })
     
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select(`
-        id,
-        title,
-        content,
-        summary,
-        thumbnail,
-        seo_title,
-        seo_description,
-        author,
-        tags,
-        slug,
-        published_at,
-        created_at,
-        updated_at,
-        category_id,
-        category:categories(name)
-      `)
-      .or(`slug.eq.${id},id.eq.${id}`)
-      .eq('status', 'published')
-      .single()
+    // UUID 형식 검증
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    
+    let query
+    if (isUUID) {
+      // UUID인 경우 id로만 검색
+      query = supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          content,
+          summary,
+          thumbnail,
+          seo_title,
+          seo_description,
+          author,
+          tags,
+          slug,
+          published_at,
+          created_at,
+          updated_at,
+          category_id,
+          category:categories(name)
+        `)
+        .eq('id', id)
+        .eq('status', 'published')
+        .single()
+    } else {
+      // 일반적인 경우 slug 또는 id로 검색
+      query = supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          content,
+          summary,
+          thumbnail,
+          seo_title,
+          seo_description,
+          author,
+          tags,
+          slug,
+          published_at,
+          created_at,
+          updated_at,
+          category_id,
+          category:categories(name)
+        `)
+        .or(`slug.eq.${id},id.eq.${id}`)
+        .eq('status', 'published')
+        .single()
+    }
 
-    console.log('📊 Supabase 조회 결과:', { 
+    const { data: article, error } = await query
+    
+    console.log('📊 조회 결과:', { 
       found: !!article, 
       error: error?.message,
-      title: article?.title?.substring(0, 50)
+      errorCode: error?.code 
     })
 
     if (error || !article) {
@@ -131,51 +163,39 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 // 서버 컴포넌트 (기존과 동일하지만 에러 처리 강화)
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  console.log('🔍 페이지 컴포넌트:', { id })
   
   if (!id || typeof id !== 'string') {
+    console.log('❌ 잘못된 ID 형식')
     notFound()
   }
 
-  // 먼저 slug로 조회 시도
-  let article, error
+  // UUID 검증 로직 추가
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   
-  // 숫자로만 이루어진 ID인 경우 (기존 ID 방식)
-  const isNumericId = /^\d+$/.test(id)
-  
-  if (isNumericId) {
-    // ID로 조회하여 slug 확인
-    const { data: articleData, error: articleError } = await supabase
+  let query
+  if (isUUID) {
+    query = supabase
       .from('articles')
       .select('*, category:categories(*)')
       .eq('id', id)
       .eq('status', 'published')
       .single()
-    
-    if (articleError || !articleData) {
-      notFound()
-    }
-    
-    // slug가 있으면 slug URL로 리디렉트
-    if (articleData.slug && articleData.slug !== id) {
-      redirect(`/article/${articleData.slug}`, RedirectType.replace)
-    }
-    
-    article = articleData
-    error = articleError
   } else {
-    // slug 또는 ID로 조회
-    const { data: articleData, error: articleError } = await supabase
-      .from('articles')
+    query = supabase
+      .from('articles') 
       .select('*, category:categories(*)')
       .or(`slug.eq.${id},id.eq.${id}`)
       .eq('status', 'published')
       .single()
-    
-    article = articleData
-    error = articleError
   }
 
+  const { data: article, error } = await query
+  
+  console.log('📊 페이지 데이터 조회:', { found: !!article, error: error?.message })
+
   if (error || !article) {
+    console.log('❌ 아티클 없음, 404 반환')
     notFound()
   }
 
