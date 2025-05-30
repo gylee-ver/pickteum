@@ -63,9 +63,6 @@ Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 다음 웹마스터도구 인증
-#DaumWebMasterTool:c09f592f9c89412496325586937a6ea735b3d45e12a9d31f2467f9b2a429c057:Ra2k1kitr6u0odUiTWghlA==
-
 # 구글 모바일 친화성 테스트 봇
 User-agent: Chrome-Lighthouse
 Allow: /
@@ -78,7 +75,28 @@ Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 단축 URL 크롤링 차단 (중복 콘텐츠 방지)
+# 단축 URL 크롤링 차단 (중복 콘텐츠 방지) - 검색엔진용
 User-agent: *
 Disallow: /s/
 Disallow: /test-short/
+
+# 🔥 소셜 미디어 크롤러는 허용 (공유 기능 유지)
+User-agent: facebookexternalhit
+Allow: /s/
+Allow: /
+
+User-agent: Twitterbot
+Allow: /s/
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /s/
+Allow: /`
+
+  return new NextResponse(robotsTxt, {
+    headers: {
+      "Content-Type": "text/plain",
+      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+    },
+  })
+}
