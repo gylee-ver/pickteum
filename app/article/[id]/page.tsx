@@ -7,15 +7,19 @@ import { RedirectType } from 'next/navigation'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
 // 강제 동적 렌더링
-export const dynamic = 'force-dynamic'
+// export const dynamic = 'force-dynamic'
+
+// 또는 static으로 변경
+export const dynamic = 'force-static'
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  console.log('🚀 generateMetadata 함수 시작')
+  
   try {
     const { id } = await params
     console.log('🔍 메타데이터 생성 시작:', { id })
     
-    // 카테고리 정보도 함께 가져오기
     const { data: article, error } = await supabase
       .from('articles')
       .select(`
@@ -40,14 +44,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .single()
 
     console.log('📊 Supabase 조회 결과:', { 
-      id, 
       found: !!article, 
       error: error?.message,
-      title: article?.title 
+      title: article?.title?.substring(0, 50)
     })
 
     if (error || !article) {
-      console.log('❌ 기본 메타데이터 반환:', { error: error?.message })
+      console.log('❌ 기본 메타데이터 반환')
       return getDefaultMetadata()
     }
 
@@ -115,10 +118,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
 
-    console.log('✅ 커스텀 메타데이터 생성 완료:', { 
-      title: titleWithCategory,
-      thumbnail: thumbnailUrl
-    })
+    console.log('✅ 커스텀 메타데이터 생성 성공')
 
     return metadata
 
