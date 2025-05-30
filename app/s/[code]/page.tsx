@@ -14,107 +14,38 @@ export const revalidate = 60 // 60초마다 재검증
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   try {
     const { code } = await params
-    console.log('🔍 단축 URL 메타데이터 생성:', { code })
     
-    // 코드 유효성 검사 강화
-    if (!code || typeof code !== 'string') {
-      console.log('❌ 코드 타입 오류:', typeof code)
+    // 코드 검증 최적화
+    if (!code || code.length !== 6) {
       return getLibDefaultMetadata()
     }
     
-    const trimmedCode = code.trim()
-    if (trimmedCode.length !== 6) {
-      console.log('❌ 코드 길이 오류:', { original: code, trimmed: trimmedCode, length: trimmedCode.length })
-      return getLibDefaultMetadata()
-    }
+    // 타임아웃 설정으로 크롤러 응답 최적화
+    const { data: article, error } = await Promise.race([
+      supabase
+        .from('articles')
+        .select('id, title, summary, thumbnail, author, category:categories(name)')
+        .eq('short_code', code)
+        .eq('status', 'published')
+        .single(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+    ]) as any
     
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select(`
-        id,
-        title,
-        content,
-        summary,
-        thumbnail,
-        seo_title,
-        seo_description,
-        author,
-        tags,
-        published_at,
-        created_at,
-        updated_at,
-        short_code,
-        category_id,
-        category:categories(name)
-      `)
-      .eq('short_code', trimmedCode)
-      .eq('status', 'published')
-      .single()
-    
-    console.log('📊 단축 URL 조회 결과:', { 
-      code: trimmedCode,
-      found: !!article, 
-      error: error?.message 
-    })
-
     if (error || !article) {
-      console.log('❌ 단축 URL 기본 메타데이터 반환')
       return getLibDefaultMetadata()
     }
-
-    console.log('✅ 단축 URL 커스텀 메타데이터 생성 성공')
-    // SEO에 최적화된 제목 생성 (카테고리 포함)
-    const seoTitle = article.seo_title || article.title
-    const categoryName = (article.category as any)?.name
-    const titleWithCategory = categoryName ? `${seoTitle} - ${categoryName}` : seoTitle
     
-    // SEO에 최적화된 설명 생성
-    let seoDescription = article.seo_description || article.summary
-    if (!seoDescription && article.content) {
-      // HTML 태그 제거 후 첫 160자 추출
-      const plainText = article.content.replace(/<[^>]*>/g, '').trim()
-      seoDescription = plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')
-    }
-    seoDescription = seoDescription || '픽틈에서 제공하는 유익한 콘텐츠입니다.'
-    
-    // 썸네일 URL 처리 (검증 로직 제거 - 빠른 응답을 위해)
-    let thumbnailUrl = 'https://www.pickteum.com/pickteum_og.png'
-    
-    if (article.thumbnail && typeof article.thumbnail === 'string' && article.thumbnail.trim() !== '') {
-      // URL 형식 확인 및 변환
-      if (article.thumbnail.startsWith('http')) {
-        thumbnailUrl = article.thumbnail
-      } else if (article.thumbnail.startsWith('/')) {
-        thumbnailUrl = `https://www.pickteum.com${article.thumbnail}`
-      } else {
-        thumbnailUrl = `https://www.pickteum.com/${article.thumbnail}`
-      }
-    }
-
-    // 소셜 메타데이터 생성
-    const socialMeta = generateSocialMeta({
-      title: `${titleWithCategory} | 픽틈`,
-      description: seoDescription,
-      imageUrl: thumbnailUrl,
-      url: `https://www.pickteum.com/s/${trimmedCode}`,
-      type: 'article',
-      publishedTime: article.published_at || article.created_at,
-      modifiedTime: article.updated_at,
-      author: article.author || '픽틈',
-      section: categoryName,
+    // 간단한 메타데이터 생성 (빠른 응답)
+    return generateSocialMeta({
+      title: `${article.title} | 픽틈`,
+      description: article.summary || '픽틈 아티클',
+      imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
+      url: `https://www.pickteum.com/s/${code}`,
+      type: 'article'
     })
-
-    return {
-      ...socialMeta,
-      keywords: Array.isArray(article.tags) ? article.tags.join(', ') : (typeof article.tags === 'string' ? article.tags : ''),
-      authors: [{ name: article.author || '픽틈' }],
-      alternates: {
-        canonical: `https://www.pickteum.com/article/${article.id}`,
-      },
-    }
-
+    
   } catch (error) {
-    console.error('💥 단축 URL 메타데이터 생성 오류:', error)
+    console.error('메타데이터 생성 오류:', error)
     return getLibDefaultMetadata()
   }
 }
