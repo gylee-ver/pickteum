@@ -9,7 +9,6 @@ import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
-import { ScrollButton } from "@/components/ui/scroll-button"
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
 // 백업용 샘플 데이터 (API 로드 실패 시 사용)
@@ -238,7 +237,6 @@ export default function ContentFeed() {
     return (
       <div className="mt-8 mb-8 text-center py-12">
         <p className="text-[#767676]">"{activeCategory}" 카테고리에 콘텐츠가 없습니다.</p>
-        <ScrollButton />
       </div>
     )
   }
@@ -261,7 +259,6 @@ export default function ContentFeed() {
             </>
           )}
         </div>
-        <ScrollButton />
     </div>
   )
 }

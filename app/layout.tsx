@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Script from 'next/script'
-import { ScrollButton } from "@/components/ui/scroll-button"
 import OrganizationSchema from '@/components/organization-schema'
 import WebsiteSchema from '@/components/website-schema'
 
@@ -183,7 +182,6 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <ScrollButton />
       </body>
     </html>
   )
