@@ -4,7 +4,7 @@ import supabase from "@/lib/supabase"
 import ArticleClient from './article-client'
 import ArticleSchema from '@/components/article-schema'
 import { RedirectType } from 'next/navigation'
-import { generateSocialMeta, getDefaultMetadata, validateImageUrl } from '@/lib/social-meta'
+import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
 // 강제 동적 렌더링
 export const dynamic = 'force-dynamic'
@@ -69,36 +69,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const limitedKeywords = keywordsString.length > 250 ? 
       keywordsString.substring(0, 247) + '...' : keywordsString
     
-    // 썸네일 URL 처리 및 검증
+    // 썸네일 URL 처리 (검증 로직 제거 - 빠른 응답을 위해)
     let thumbnailUrl = 'https://www.pickteum.com/pickteum_og.png'
     
-    if (article.thumbnail) {
-      let candidateUrl = ''
-      
+    if (article.thumbnail && typeof article.thumbnail === 'string' && article.thumbnail.trim() !== '') {
       // URL 형식 확인 및 변환
       if (article.thumbnail.startsWith('http')) {
-        candidateUrl = article.thumbnail
+        thumbnailUrl = article.thumbnail
       } else if (article.thumbnail.startsWith('/')) {
-        candidateUrl = `https://www.pickteum.com${article.thumbnail}`
+        thumbnailUrl = `https://www.pickteum.com${article.thumbnail}`
       } else {
-        candidateUrl = `https://www.pickteum.com/${article.thumbnail}`
-      }
-      
-      // 이미지 접근성 검증 (타임아웃 적용)
-      try {
-        const isValid = await Promise.race([
-          validateImageUrl(candidateUrl),
-          new Promise<boolean>((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 3000)
-          )
-        ])
-        
-        if (isValid) {
-          thumbnailUrl = candidateUrl
-        }
-      } catch (error) {
-        console.warn('썸네일 검증 실패, 기본 이미지 사용:', error)
-        // 기본 이미지 사용 (이미 설정됨)
+        thumbnailUrl = `https://www.pickteum.com/${article.thumbnail}`
       }
     }
 
