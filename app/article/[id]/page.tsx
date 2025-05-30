@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const { data: article, error } = await Promise.race([
       supabase
         .from('articles')
-        .select('id, title, content, seo_description, thumbnail, author, category:categories(name)')
+        .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
         .eq('id', id)
         .eq('status', 'published')
         .single(),
@@ -60,13 +60,29 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description = description || '픽틈 아티클'
     
     // 간단한 메타데이터 생성 (빠른 응답)
-    const metadata = generateSocialMeta({
-      title: `${article.title} | 픽틈`,
-      description,
-      imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
-      url: `https://www.pickteum.com/article/${id}`,
-      type: 'article'
-    })
+    const metadata = {
+      ...generateSocialMeta({
+        title: article.title.length > 50 ? 
+          `${article.title.substring(0, 50)}... | 픽틈` : 
+          `${article.title} | 픽틈`,
+        description,
+        imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
+        url: `https://www.pickteum.com/article/${id}`,
+        type: 'article',
+        publishedTime: article.published_at,
+        modifiedTime: article.updated_at,
+        section: article.category?.name
+      }),
+      // 추가 SEO 요소
+      alternates: {
+        canonical: `https://www.pickteum.com/article/${id}`
+      },
+      keywords: [
+        article.title.split(' ').slice(0, 5),
+        article.category?.name,
+        '픽틈', '뉴스'
+      ].flat().filter(Boolean)
+    }
     
     console.log('🔥 생성된 메타데이터:', JSON.stringify(metadata, null, 2))
     return metadata

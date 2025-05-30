@@ -77,12 +77,8 @@ Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
-`
 
-  return new NextResponse(robotsTxt, {
-    headers: {
-      "Content-Type": "text/plain",
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
-    },
-  })
-}
+# 단축 URL 크롤링 차단 (중복 콘텐츠 방지)
+User-agent: *
+Disallow: /s/
+Disallow: /test-short/
