@@ -48,7 +48,7 @@ export async function GET() {
         id,
         title,
         content,
-        summary,
+        seo_description,
         published_at,
         updated_at,
         category:categories(name)
@@ -81,7 +81,7 @@ export async function GET() {
     
     ${articles?.map(article => {
       const cleanContent = article.content?.replace(/<[^>]*>/g, '') || ''
-      const description = article.summary || cleanContent.substring(0, 200) + '...'
+      const description = article.seo_description || cleanContent.substring(0, 200) + '...'
       
       return `
     <item>

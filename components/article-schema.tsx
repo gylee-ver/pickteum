@@ -5,7 +5,7 @@ interface ArticleSchemaProps {
     id: string
     title: string
     content: string
-    summary?: string
+    seo_description?: string
     published_at: string
     updated_at: string
     thumbnail_url?: string
@@ -21,7 +21,7 @@ export default function ArticleSchema({ article }: ArticleSchemaProps) {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     "headline": article.title,
-    "description": article.summary || article.content.substring(0, 160).replace(/<[^>]*>/g, ''),
+    "description": article.seo_description || article.content.substring(0, 160).replace(/<[^>]*>/g, ''),
     "image": article.thumbnail_url ? `https://www.pickteum.com${article.thumbnail_url}` : "https://www.pickteum.com/pickteum_og.png",
     "datePublished": article.published_at,
     "dateModified": article.updated_at,

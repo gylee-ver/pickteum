@@ -15,8 +15,7 @@ export const revalidate = 60 // 60초마다 재검증
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  // 강제 로그 (배포 환경에서도 보이도록)
-  console.log('🔥 아티클 메타데이터 함수 시작')
+  console.log('🆕 NEW VERSION: 아티클 메타데이터 v2.0')
   
   try {
     const { id } = await params
@@ -31,11 +30,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     console.log('🔥 데이터베이스 조회 시작:', id)
     
-    // 타임아웃 설정으로 크롤러 응답 최적화
+    // 타임아웃 설정으로 크롤러 응답 최적화 - 올바른 컬럼명 사용
     const { data: article, error } = await Promise.race([
       supabase
         .from('articles')
-        .select('id, title, summary, thumbnail, author, category:categories(name)')
+        .select('id, title, content, seo_description, thumbnail, author, category:categories(name)')
         .eq('id', id)
         .eq('status', 'published')
         .single(),
@@ -51,10 +50,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     console.log('🔥 아티클 발견, 커스텀 메타데이터 생성 중:', article.title)
     
+    // 설명 생성 - seo_description을 먼저 사용하고, 없으면 content에서 추출
+    let description = article.seo_description
+    if (!description && article.content) {
+      // HTML 태그 제거 후 첫 160자 추출
+      const plainText = article.content.replace(/<[^>]*>/g, '').trim()
+      description = plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')
+    }
+    description = description || '픽틈 아티클'
+    
     // 간단한 메타데이터 생성 (빠른 응답)
     const metadata = generateSocialMeta({
       title: `${article.title} | 픽틈`,
-      description: article.summary || '픽틈 아티클',
+      description,
       imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
       url: `https://www.pickteum.com/article/${id}`,
       type: 'article'
