@@ -145,7 +145,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
       // 🔥 에러 추적
       if (window.gtag) {
         window.gtag('event', 'share_error', {
-          error_message: error.message,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
           article_id: article.id
         })
       }
@@ -193,8 +193,22 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
 
   // 스마트 뒤로가기 핸들러
   const handleBackNavigation = () => {
-    if (window.history.length > 1) {
-      router.back()
+    if (typeof window !== 'undefined') {
+      const referrer = document.referrer
+      
+      // 같은 도메인의 /s/ 경로에서 온 경우 또는 히스토리가 1개만 있는 경우 홈으로
+      if (referrer.includes('/s/') || window.history.length <= 1) {
+        router.push('/')
+        return
+      }
+      
+      // 그 외의 경우 뒤로가기 시도
+      try {
+        router.back()
+      } catch {
+        // 뒤로가기 실패 시 홈으로
+        router.push('/')
+      }
     } else {
       router.push('/')
     }
