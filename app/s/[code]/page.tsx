@@ -5,55 +5,6 @@ import supabase from '@/lib/supabase'
 // 최소한의 테스트 버전
 export const dynamic = 'force-dynamic'
 
-// 캐시를 위한 Map (메모리 기반 임시 캐시)
-const articleCache = new Map<string, any>()
-const CACHE_TTL = 5 * 60 * 1000 // 5분
-
-// 아티클 데이터 조회 (캐시 포함)
-async function getArticleByCode(code: string) {
-  const cacheKey = `article_${code}`
-  const cached = articleCache.get(cacheKey)
-  
-  // 캐시된 데이터가 있고 유효한 경우
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    return cached.data
-  }
-  
-  const { data: article, error } = await supabase
-    .from('articles')
-    .select(`
-      id,
-      title,
-      content,
-      thumbnail,
-      seo_title,
-      seo_description,
-      author,
-      tags,
-      published_at,
-      created_at,
-      updated_at,
-      short_code,
-      category_id,
-      views
-    `)
-    .eq('short_code', code)
-    .eq('status', 'published')
-    .single()
-  
-  if (error || !article) {
-    return null
-  }
-  
-  // 캐시에 저장
-  articleCache.set(cacheKey, {
-    data: article,
-    timestamp: Date.now()
-  })
-  
-  return article
-}
-
 // 메타데이터 생성
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   try {
@@ -64,9 +15,29 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       return getDefaultMetadata()
     }
     
-    const article = await getArticleByCode(code)
+    // 안전한 쿼리
+    const { data: article, error } = await supabase
+      .from('articles')
+      .select(`
+        id,
+        title,
+        content,
+        thumbnail,
+        seo_title,
+        seo_description,
+        author,
+        tags,
+        published_at,
+        created_at,
+        updated_at,
+        short_code,
+        category_id
+      `)
+      .eq('short_code', code)
+      .eq('status', 'published')
+      .single()
     
-    if (!article) {
+    if (error || !article) {
       return getDefaultMetadata()
     }
 
@@ -74,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const title = (article.seo_title || article.title || '픽틈').trim()
     const description = (article.seo_description || 
       (article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '') ||
-      '픽틀에서 제공하는 유익한 콘텐츠입니다.').trim()
+      '픽틈에서 제공하는 유익한 콘텐츠입니다.').trim()
     
     let imageUrl = 'https://www.pickteum.com/pickteum_og.png'
     if (article.thumbnail && typeof article.thumbnail === 'string') {
@@ -164,21 +135,26 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     notFound()
   }
   
-  // 캐시된 데이터 재사용
-  const article = await getArticleByCode(code)
+  const { data: article, error } = await supabase
+    .from('articles')
+    .select('id, views')
+    .eq('short_code', code)
+    .eq('status', 'published')
+    .single()
   
-  if (!article) {
+  if (error || !article) {
     notFound()
   }
   
-  // 조회수 증가 (비동기, 백그라운드)
-  // redirect 전에 실행하되 기다리지 않음
+  // 조회수 증가 (백그라운드)
   supabase
     .from('articles')
     .update({ views: (article.views || 0) + 1 })
     .eq('id', article.id)
-    .catch(error => {
-      console.log('조회수 증가 실패:', error.message)
+    .then(({ error }) => {
+      if (error) {
+        console.log('조회수 증가 실패:', error.message)
+      }
     })
   
   // 즉시 redirect
