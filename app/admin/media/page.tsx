@@ -105,12 +105,20 @@ function getFileIcon(type: string) {
 // 이미지 차원 정보를 URL에서 가져오는 함수 - 수정됨
 const getImageDimensionsFromUrl = async (url: string): Promise<string | null> => {
   return new Promise((resolve) => {
-    // Next.js Image 컴포넌트와 구분하기 위해 HTMLImageElement 사용
-    const img = new window.Image() // 또는 document.createElement('img')
+    const img = new window.Image()
+    const cleanup = () => {
+      img.onload = null
+      img.onerror = null
+    }
+    
     img.onload = () => {
       resolve(`${img.width}x${img.height}`)
+      cleanup()
     }
-    img.onerror = () => resolve(null)
+    img.onerror = () => {
+      resolve(null)
+      cleanup()
+    }
     img.src = url
   })
 }
@@ -154,6 +162,71 @@ async function getImageUsage(imageUrl: string): Promise<string[]> {
     console.error('이미지 사용처 조회 예외:', error)
     return []
   }
+}
+
+// 배치 처리로 성능 개선
+const getAllImageUsages = async (imageUrls: string[]) => {
+  const { data } = await supabase
+    .from('articles')
+    .select('title, thumbnail, content')
+    
+  const usageMap = new Map()
+  data?.forEach(article => {
+    imageUrls.forEach(url => {
+      if (article.thumbnail === url || article.content?.includes(url)) {
+        if (!usageMap.has(url)) usageMap.set(url, [])
+        usageMap.get(url).push(article.title)
+      }
+    })
+  })
+  return usageMap
+}
+
+const handleStorageError = (error: any, context: string) => {
+  const errorMessages = {
+    'not valid JSON': 'Storage 접근 권한이 없습니다.',
+    'bucket not found': '버킷을 찾을 수 없습니다.',
+    'network error': '네트워크 연결을 확인해주세요.',
+  }
+  
+  const userMessage = Object.keys(errorMessages).find(key => 
+    error.message?.includes(key)
+  ) ? errorMessages[error.message] : '알 수 없는 오류가 발생했습니다.'
+  
+  console.error(`${context}:`, error)
+  return userMessage
+}
+
+// alt 텍스트 관리 강화
+const updateImageAltText = async (filePath: string, altText: string) => {
+  // 파일 메타데이터에 alt 텍스트 저장
+  const { error } = await supabase.storage
+    .from('article-thumbnails')
+    .update(filePath, {}, {
+      metadata: { alt_text: altText }
+    })
+  
+  if (error) throw error
+}
+
+// 이미지 최적화 정보 추가
+const getImageOptimizationInfo = (file: MediaFile) => {
+  const recommendations = []
+  
+  if (file.type.startsWith('image/')) {
+    if (file.size > 500 * 1024) {
+      recommendations.push('이미지 압축 권장 (500KB 이하)')
+    }
+    
+    if (file.dimensions) {
+      const [width, height] = file.dimensions.split('x').map(Number)
+      if (width > 1920 || height > 1080) {
+        recommendations.push('웹 최적화를 위해 크기 조정 권장')
+      }
+    }
+  }
+  
+  return recommendations
 }
 
 export default function MediaLibraryPage() {
@@ -232,12 +305,8 @@ export default function MediaLibraryPage() {
         console.error(`폴더 ${folderPath} 조회 오류:`, error)
         
         // 특정 오류 타입에 따른 처리
-        if (error.message?.includes('not valid JSON')) {
-          console.error('Storage API 인증 또는 권한 문제 발생')
-          throw new Error('Storage 접근 권한이 없습니다. 관리자에게 문의하세요.')
-        }
-        
-        return []
+        const userMessage = handleStorageError(error, `폴더 ${folderPath} 로드 실패`)
+        throw new Error(userMessage)
       }
 
       if (!files) {
@@ -342,11 +411,8 @@ export default function MediaLibraryPage() {
       console.error(`폴더 ${folderPath} 로드 실패:`, error)
       
       // 사용자에게 친화적인 오류 메시지
-      if (error instanceof Error) {
-        throw error // 이미 처리된 오류는 그대로 전달
-      } else {
-        throw new Error(`폴더 "${folderPath}" 로드 중 예상치 못한 오류가 발생했습니다.`)
-      }
+      const userMessage = handleStorageError(error, `폴더 ${folderPath} 로드 실패`)
+      throw new Error(userMessage)
     }
   }
 
@@ -735,6 +801,14 @@ export default function MediaLibraryPage() {
     document.body.removeChild(link)
   }
 
+  // 키보드 네비게이션 지원
+  const handleKeyDown = (e: KeyboardEvent, fileId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      showFileDetails(media.find(f => f.id === fileId)!)
+    }
+  }
+
   // 로딩 상태
   if (isLoading) {
     return (
@@ -1054,7 +1128,14 @@ export default function MediaLibraryPage() {
                 </DropdownMenu>
               </div>
 
-              <div className="aspect-square cursor-pointer" onClick={() => showFileDetails(item)}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label={`${item.name} 파일 상세 정보 보기`}
+                onKeyDown={(e) => handleKeyDown(e, item.id)}
+                className="aspect-square cursor-pointer"
+                onClick={() => showFileDetails(item)}
+              >
                 {item.type.startsWith("image/") ? (
                   <Image src={item.url || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
                 ) : (
