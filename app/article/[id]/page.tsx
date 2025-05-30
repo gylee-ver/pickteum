@@ -15,14 +15,21 @@ export const revalidate = 60 // 60초마다 재검증
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  // 강제 로그 (배포 환경에서도 보이도록)
+  console.log('🔥 아티클 메타데이터 함수 시작')
+  
   try {
     const { id } = await params
+    console.log('🔥 받은 ID:', id)
     
     // UUID 검증 최적화
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     if (!isUUID) {
+      console.log('🔥 UUID 검증 실패, 기본 메타데이터 반환')
       return getDefaultMetadata()
     }
+    
+    console.log('🔥 데이터베이스 조회 시작:', id)
     
     // 타임아웃 설정으로 크롤러 응답 최적화
     const { data: article, error } = await Promise.race([
@@ -35,12 +42,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
     ]) as any
     
+    console.log('🔥 데이터베이스 결과:', { article: !!article, error: error?.message })
+    
     if (error || !article) {
+      console.log('🔥 아티클 없음, 기본 메타데이터 반환')
       return getDefaultMetadata()
     }
     
+    console.log('🔥 아티클 발견, 커스텀 메타데이터 생성 중:', article.title)
+    
     // 간단한 메타데이터 생성 (빠른 응답)
-    return generateSocialMeta({
+    const metadata = generateSocialMeta({
       title: `${article.title} | 픽틈`,
       description: article.summary || '픽틈 아티클',
       imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
@@ -48,8 +60,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       type: 'article'
     })
     
+    console.log('🔥 생성된 메타데이터:', JSON.stringify(metadata, null, 2))
+    return metadata
+    
   } catch (error) {
-    console.error('메타데이터 생성 오류:', error)
+    console.error('🔥 메타데이터 생성 오류:', error)
     return getDefaultMetadata()
   }
 }
