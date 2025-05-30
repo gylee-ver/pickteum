@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
     const { id } = await params
+    console.log('🔍 메타데이터 생성 시작:', { id })
     
     // 카테고리 정보도 함께 가져오기
     const { data: article, error } = await supabase
@@ -38,7 +39,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .eq('status', 'published')
       .single()
 
+    console.log('📊 Supabase 조회 결과:', { 
+      id, 
+      found: !!article, 
+      error: error?.message,
+      title: article?.title 
+    })
+
     if (error || !article) {
+      console.log('❌ 기본 메타데이터 반환:', { error: error?.message })
       return getDefaultMetadata()
     }
 
@@ -106,11 +115,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
 
+    console.log('✅ 커스텀 메타데이터 생성 완료:', { 
+      title: titleWithCategory,
+      thumbnail: thumbnailUrl
+    })
+
     return metadata
 
   } catch (error) {
-    console.error('메타데이터 생성 오류:', error)
-    // 치명적 오류시에도 기본 메타데이터 반환 (절대 실패하지 않음)
+    console.error('💥 메타데이터 생성 오류:', error)
     return getDefaultMetadata()
   }
 }
