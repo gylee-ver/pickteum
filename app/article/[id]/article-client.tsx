@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Share2, Copy, Check } from "lucide-react"
@@ -21,6 +22,7 @@ interface ArticleClientProps {
 }
 
 export default function ArticleClient({ articleId, initialArticle }: ArticleClientProps) {
+  const router = useRouter()
   const [article, setArticle] = useState<any>(initialArticle)
   const [relatedArticles, setRelatedArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialArticle)
@@ -189,6 +191,15 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
     setIsCopied(false)
   }
 
+  // 스마트 뒤로가기 핸들러
+  const handleBackNavigation = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
+
   if (loading) {
     return <LoadingSkeleton />
   }
@@ -209,12 +220,10 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
         {/* 헤더 */}
         <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center h-14 px-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft size={20} />
-                <span className="sr-only">뒤로 가기</span>
-              </Button>
-            </Link>
+            <Button variant="ghost" size="icon" onClick={handleBackNavigation}>
+              <ArrowLeft size={20} />
+              <span className="sr-only">뒤로 가기</span>
+            </Button>
             <h1 className="mx-auto text-lg font-bold text-[#212121] truncate max-w-[200px]">
               {article.category?.name || '픽틈'}
             </h1>
@@ -412,16 +421,24 @@ function LoadingSkeleton() {
 
 // 에러 상태 컴포넌트
 function ErrorState() {
+  const router = useRouter()
+  
+  const handleBackNavigation = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center h-14 px-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft size={20} />
-              </Button>
-            </Link>
+            <Button variant="ghost" size="icon" onClick={handleBackNavigation}>
+              <ArrowLeft size={20} />
+            </Button>
           </div>
         </header>
         <main className="flex-grow flex items-center justify-center">
