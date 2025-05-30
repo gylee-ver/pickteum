@@ -4,19 +4,30 @@ import supabase from '@/lib/supabase'
 import { generateSocialMeta, getDefaultMetadata as getLibDefaultMetadata } from '@/lib/social-meta'
 
 // 최소한의 테스트 버전
-export const dynamic = 'force-dynamic'
+// export const dynamic = 'force-dynamic'
+
+// 수정 필요
+// export const dynamic = 'force-dynamic' // 이 줄 제거 또는 주석
+export const revalidate = 60 // 60초마다 재검증
 
 // 메타데이터 생성
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   try {
     const { code } = await params
+    console.log('🔍 단축 URL 메타데이터 생성:', { code })
     
-    // 코드 유효성 검사
-    if (!code || typeof code !== 'string' || code.length !== 6) {
+    // 코드 유효성 검사 강화
+    if (!code || typeof code !== 'string') {
+      console.log('❌ 코드 타입 오류:', typeof code)
       return getLibDefaultMetadata()
     }
     
-    // 카테고리 정보도 함께 가져오기 (풍부한 메타데이터를 위해)
+    const trimmedCode = code.trim()
+    if (trimmedCode.length !== 6) {
+      console.log('❌ 코드 길이 오류:', { original: code, trimmed: trimmedCode, length: trimmedCode.length })
+      return getLibDefaultMetadata()
+    }
+    
     const { data: article, error } = await supabase
       .from('articles')
       .select(`
@@ -36,14 +47,22 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         category_id,
         category:categories(name)
       `)
-      .eq('short_code', code)
+      .eq('short_code', trimmedCode)
       .eq('status', 'published')
       .single()
     
+    console.log('📊 단축 URL 조회 결과:', { 
+      code: trimmedCode,
+      found: !!article, 
+      error: error?.message 
+    })
+
     if (error || !article) {
+      console.log('❌ 단축 URL 기본 메타데이터 반환')
       return getLibDefaultMetadata()
     }
 
+    console.log('✅ 단축 URL 커스텀 메타데이터 생성 성공')
     // SEO에 최적화된 제목 생성 (카테고리 포함)
     const seoTitle = article.seo_title || article.title
     const categoryName = (article.category as any)?.name
@@ -77,7 +96,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       title: `${titleWithCategory} | 픽틈`,
       description: seoDescription,
       imageUrl: thumbnailUrl,
-      url: `https://www.pickteum.com/s/${code}`,
+      url: `https://www.pickteum.com/s/${trimmedCode}`,
       type: 'article',
       publishedTime: article.published_at || article.created_at,
       modifiedTime: article.updated_at,
@@ -95,7 +114,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
 
   } catch (error) {
-    console.error('메타데이터 생성 오류:', error)
+    console.error('💥 단축 URL 메타데이터 생성 오류:', error)
     return getLibDefaultMetadata()
   }
 }
