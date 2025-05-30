@@ -233,46 +233,48 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
         
         {/* 헤더 */}
         <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
-          <div className="flex items-center h-14 px-4">
+          <nav className="flex items-center h-14 px-4" role="navigation" aria-label="아티클 네비게이션">
             <Button variant="ghost" size="icon" onClick={handleBackNavigation}>
               <ArrowLeft size={20} />
               <span className="sr-only">뒤로 가기</span>
             </Button>
-            <h1 className="mx-auto text-lg font-bold text-[#212121] truncate max-w-[200px]">
+            <span className="mx-auto text-lg font-bold text-[#212121] truncate max-w-[200px]">
               {article.category?.name || '픽틈'}
-            </h1>
+            </span>
             <Button 
               variant="ghost" 
               size="icon"
               onClick={handleShare}
+              aria-label="아티클 공유하기"
             >
               <Share2 size={20} />
               <span className="sr-only">공유하기</span>
             </Button>
-          </div>
+          </nav>
         </header>
 
         {/* 메인 콘텐츠 */}
         <main className="flex-grow">
           <article className="px-4 py-6">
-            {/* 아티클 헤더 */}
-            <div className="mb-4">
+            {/* 🔥 SEO 최적화된 아티클 헤더 */}
+            <header className="mb-4">
               <span
                 className="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-2"
                 style={{ backgroundColor: article.category?.color || '#cccccc' }}
               >
                 {article.category?.name || '미분류'}
               </span>
-              <h1 className="text-xl font-bold text-[#212121] mb-2">{article.title}</h1>
-              <div className="flex items-center text-sm text-[#767676]">
+              {/* 🔥 H1 태그를 아티클 제목으로 변경 (SEO 핵심) */}
+              <h1 className="text-xl font-bold text-[#212121] mb-2 leading-tight">{article.title}</h1>
+              <div className="flex items-center text-sm text-[#767676]" role="contentinfo">
                 <span>{article.author}</span>
                 <span className="mx-2">·</span>
-                <span>
+                <time dateTime={article.published_at || article.created_at}>
                   {article.published_at ? 
                     format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
                     format(new Date(article.created_at), 'yyyy.MM.dd', { locale: ko })
                   }
-                </span>
+                </time>
                 {article.views && (
                   <>
                     <span className="mx-2">·</span>
@@ -280,10 +282,10 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
                   </>
                 )}
               </div>
-            </div>
+            </header>
 
             {/* 썸네일 이미지 */}
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-6">
+            <figure className="relative w-full aspect-video rounded-lg overflow-hidden mb-6">
               <Image
                 src={getImageUrl(article.thumbnail)}
                 alt={article.thumbnail_alt || article.title}
@@ -292,17 +294,19 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
                 priority
                 sizes="100vw"
               />
-            </div>
+            </figure>
 
-            {/* 아티클 본문 */}
-            <div
-              className="prose prose-sm max-w-none text-[#333333]"
+            {/* 🔥 SEO 최적화된 아티클 본문 */}
+            <section
+              className="prose prose-sm max-w-none text-[#333333] article-content"
               dangerouslySetInnerHTML={{ __html: article.content }}
+              role="main"
+              aria-label="아티클 본문"
             />
 
             {/* 관련 콘텐츠 */}
             {relatedArticles.length > 0 && (
-              <div className="mt-12 mb-8">
+              <aside className="mt-12 mb-8" role="complementary" aria-label="관련 콘텐츠">
                 <h2 className="text-lg font-bold text-[#212121] mb-4">관련 콘텐츠</h2>
                 <div className="grid grid-cols-1 gap-4">
                   {relatedArticles.map((relatedArticle) => (
@@ -316,7 +320,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
                     />
                   ))}
                 </div>
-              </div>
+              </aside>
             )}
           </article>
         </main>

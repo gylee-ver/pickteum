@@ -15,7 +15,7 @@ export const revalidate = 60 // 60초마다 재검증
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🆕 NEW VERSION: 아티클 메타데이터 v2.0')
+  console.log('🔥 SEO 최적화 아티클 메타데이터 v3.0')
   
   try {
     const { id } = await params
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     console.log('🔥 데이터베이스 조회 시작:', id)
     
-    // 타임아웃 설정으로 크롤러 응답 최적화 - 올바른 컬럼명 사용
+    // 타임아웃 설정으로 크롤러 응답 최적화 - 콘텐츠도 포함해서 키워드 추출
     const { data: article, error } = await Promise.race([
       supabase
         .from('articles')
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       return getDefaultMetadata()
     }
     
-    console.log('🔥 아티클 발견, 커스텀 메타데이터 생성 중:', article.title)
+    console.log('🔥 아티클 발견, SEO 최적화 메타데이터 생성 중:', article.title)
     
     // 설명 생성 - seo_description을 먼저 사용하고, 없으면 content에서 추출
     let description = article.seo_description
@@ -59,32 +59,36 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
     description = description || '픽틈 아티클'
     
-    // 간단한 메타데이터 생성 (빠른 응답)
+    // 🔥 개선된 SEO 메타데이터 생성
     const metadata = {
       ...generateSocialMeta({
         title: article.title.length > 50 ? 
-          `${article.title.substring(0, 50)}... | 픽틈` : 
-          `${article.title} | 픽틈`,
+          `${article.title.substring(0, 50)}...` : 
+          article.title,
         description,
         imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
         url: `https://www.pickteum.com/article/${id}`,
         type: 'article',
         publishedTime: article.published_at,
         modifiedTime: article.updated_at,
-        section: article.category?.name
+        section: article.category?.name,
+        content: article.content, // 🔥 키워드 추출용 콘텐츠 추가
+        categoryName: article.category?.name // 🔥 카테고리명 추가
       }),
-      // 추가 SEO 요소
+      // 🔥 추가 SEO 요소
       alternates: {
         canonical: `https://www.pickteum.com/article/${id}`
       },
-      keywords: [
-        article.title.split(' ').slice(0, 5),
-        article.category?.name,
-        '픽틈', '뉴스'
-      ].flat().filter(Boolean)
+      // 🔥 키워드는 이제 generateSocialMeta에서 자동 생성됨
+      other: {
+        'article:published_time': article.published_at,
+        'article:modified_time': article.updated_at,
+        'article:section': article.category?.name || '뉴스',
+        'article:author': article.author || '픽틈'
+      }
     }
     
-    console.log('🔥 생성된 메타데이터:', JSON.stringify(metadata, null, 2))
+    console.log('🔥 SEO 최적화 메타데이터 생성 완료')
     return metadata
     
   } catch (error) {

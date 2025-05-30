@@ -1,5 +1,7 @@
 "use client"
 
+import { extractKeywords } from '@/lib/social-meta'
+
 interface ArticleSchemaProps {
   article: {
     id: string
@@ -17,11 +19,22 @@ interface ArticleSchemaProps {
 }
 
 export default function ArticleSchema({ article }: ArticleSchemaProps) {
+  // 🔥 키워드 추출
+  const keywords = extractKeywords(
+    article.title,
+    article.content,
+    article.category?.name
+  )
+  
+  // 🔥 콘텐츠 요약 생성
+  const plainTextContent = article.content.replace(/<[^>]*>/g, '').trim()
+  const readingTime = Math.max(1, Math.ceil(plainTextContent.length / 200))
+  
   const schema = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     "headline": article.title,
-    "description": article.seo_description || article.content.substring(0, 160).replace(/<[^>]*>/g, ''),
+    "description": article.seo_description || plainTextContent.substring(0, 160),
     "image": [
       article.thumbnail_url ? 
         (article.thumbnail_url.startsWith('http') ? 
@@ -51,8 +64,26 @@ export default function ArticleSchema({ article }: ArticleSchemaProps) {
     "articleSection": article.category?.name || "뉴스",
     "inLanguage": "ko-KR",
     "url": `https://www.pickteum.com/article/${article.id}`,
-    "wordCount": article.content?.replace(/<[^>]*>/g, '').length || 0,
-    "timeRequired": `PT${Math.max(1, Math.ceil((article.content?.replace(/<[^>]*>/g, '').length || 0) / 200))}M`
+    "wordCount": plainTextContent.length,
+    "timeRequired": `PT${readingTime}M`,
+    // 🔥 SEO 향상을 위한 추가 요소들
+    "keywords": keywords.join(', '),
+    "about": [
+      {
+        "@type": "Thing",
+        "name": article.category?.name || "뉴스"
+      }
+    ],
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "픽틈",
+      "url": "https://www.pickteum.com",
+      "description": "틈새 시간을, 이슈 충전 타임으로!"
+    },
+    "potentialAction": {
+      "@type": "ReadAction",
+      "target": `https://www.pickteum.com/article/${article.id}`
+    }
   }
 
   return (

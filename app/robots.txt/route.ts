@@ -54,8 +54,21 @@ Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 다음 검색로봇 (다음 웹마스터도구)
+# 🔥 다음 검색로봇 (다음 웹마스터도구) - 강화된 설정
 User-agent: Daum
+Allow: /
+Allow: /sitemap.xml
+Allow: /news-sitemap.xml
+Allow: /sitemap-index.xml
+Allow: /category/
+Allow: /article/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /debug-meta
+Crawl-delay: 1
+
+# 🔥 추가: 다음카카오 모바일 검색로봇
+User-agent: Daumoa
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml

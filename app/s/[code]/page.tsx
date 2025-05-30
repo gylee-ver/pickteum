@@ -38,7 +38,7 @@ function isCrawler(userAgent: string): boolean {
 
 // 메타데이터 생성
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  console.log('🆕 NEW VERSION: 단축 URL 메타데이터 v3.0')
+  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v4.0')
   
   try {
     const { code } = await params
@@ -51,9 +51,10 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     
     console.log('🔥 데이터베이스 조회 시작:', code)
     
+    // 🔥 콘텐츠와 카테고리 정보도 함께 조회하여 키워드 추출
     const { data: article, error } = await supabase
       .from('articles')
-      .select('id, title, content, seo_description, thumbnail, author, category:categories(name)')
+      .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
       .eq('short_code', code)
       .eq('status', 'published')
       .single()
@@ -65,7 +66,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       return getLibDefaultMetadata()
     }
     
-    console.log('🔥 메타데이터 생성:', article.title)
+    console.log('🔥 SEO 최적화 메타데이터 생성:', article.title)
     
     let description = article.seo_description
     if (!description && article.content) {
@@ -74,19 +75,31 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
     description = description || '픽틈 아티클'
     
-    const metadata = generateSocialMeta({
-      title: `${article.title} | 픽틈`,
-      description,
-      imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
-      url: `https://www.pickteum.com/s/${code}`,
-      type: 'article'
-    })
+    // 🔥 단축 URL에서도 완전한 메타데이터 제공 (소셜 미디어 공유 최적화)
+    const metadata = {
+      ...generateSocialMeta({
+        title: article.title, // 브랜드명 없이 순수 제목만
+        description,
+        imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
+        url: `https://www.pickteum.com/article/${article.id}`, // 🔥 원본 아티클 URL로 설정
+        type: 'article',
+        publishedTime: article.published_at,
+        modifiedTime: article.updated_at,
+        section: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name,
+        content: article.content, // 키워드 추출용
+        categoryName: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name
+      }),
+      // 🔥 단축 URL용 추가 설정
+      alternates: {
+        canonical: `https://www.pickteum.com/article/${article.id}` // 정규 URL 설정
+      }
+    }
     
-    console.log('🔥 생성된 메타데이터:', JSON.stringify(metadata, null, 2))
+    console.log('🔥 SEO 최적화 메타데이터 생성 완료')
     return metadata
     
   } catch (error) {
-    console.error('🆕 메타데이터 생성 오류:', error)
+    console.error('🔥 메타데이터 생성 오류:', error)
     return getLibDefaultMetadata()
   }
 }
@@ -124,7 +137,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   }
   
   // User-Agent 확인
-  const headersList = headers()
+  const headersList = await headers()
   const userAgent = headersList.get('user-agent') || ''
   
   console.log('🔍 User-Agent:', userAgent)

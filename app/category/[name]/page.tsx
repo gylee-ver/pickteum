@@ -9,7 +9,7 @@ import { ko } from "date-fns/locale"
 import { generateCategoryCollectionSchema, generateBreadcrumbSchema } from '@/lib/structured-data'
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
-// 카테고리별 메타데이터 생성
+// 🔥 SEO 강화된 카테고리별 메타데이터 생성
 export async function generateMetadata({ params }: { params: { name: string } }): Promise<Metadata> {
   const categoryName = decodeURIComponent(params.name)
   
@@ -31,18 +31,35 @@ export async function generateMetadata({ params }: { params: { name: string } })
     }
   }
 
-  // 해당 카테고리의 아티클 수 확인
-  const { count } = await supabase
-    .from('articles')
-    .select('*', { count: 'exact', head: true })
-    .eq('category_id', category.id)
-    .eq('status', 'published')
+  // 해당 카테고리의 아티클 수와 최신 아티클 확인
+  const [{ count }, { data: latestArticles }] = await Promise.all([
+    supabase
+      .from('articles')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', category.id)
+      .eq('status', 'published'),
+    supabase
+      .from('articles')
+      .select('title')
+      .eq('category_id', category.id)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(3)
+  ])
 
   const hasArticles = (count || 0) > 0
+  const articleCount = count || 0
+  
+  // 🔥 SEO 최적화된 메타 설명 생성
+  const baseDescription = `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리`
+  const enhancedDescription = hasArticles 
+    ? `${baseDescription}에서 ${articleCount}개의 최신 콘텐츠를 확인하세요. ${latestArticles?.slice(0, 2).map(a => a.title).join(', ')} 등 다양한 정보를 제공합니다.`
+    : `${baseDescription} 콘텐츠를 확인해보세요.`
 
   return {
-    title: `${categoryName}`,
-    description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+    title: `${categoryName} - 픽틈`,
+    description: enhancedDescription.length > 160 ? enhancedDescription.substring(0, 157) + '...' : enhancedDescription,
+    keywords: [categoryName, '픽틈', '뉴스', '이슈', '정보', ...(latestArticles?.slice(0, 3).map(a => a.title.split(' ')[0]) || [])].join(', '),
     alternates: {
       canonical: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
     },
@@ -55,7 +72,7 @@ export async function generateMetadata({ params }: { params: { name: string } })
     },
     openGraph: {
       title: `${categoryName} - 틈 날 땐? 픽틈!`,
-      description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+      description: enhancedDescription,
       type: 'website',
       url: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
       siteName: '픽틈',
@@ -72,11 +89,15 @@ export async function generateMetadata({ params }: { params: { name: string } })
     twitter: {
       card: 'summary_large_image',
       title: `${categoryName} - 틈 날 땐? 픽틈!`,
-      description: `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리 콘텐츠를 확인해보세요.`,
+      description: enhancedDescription,
       images: ['https://www.pickteum.com/pickteum_og.png'],
       creator: '@pickteum',
       site: '@pickteum',
     },
+    other: {
+      'article:section': categoryName,
+      'content:type': 'category'
+    }
   }
 }
 
@@ -161,38 +182,50 @@ export default async function CategoryPage({ params }: { params: { name: string 
             <Header />
             
             <main className="flex-grow px-4 py-6">
-              {/* 카테고리 헤더 */}
-              <div className="mb-6">
+              {/* 🔥 SEO 최적화된 카테고리 헤더 */}
+              <header className="mb-6">
                 <div className="flex items-center mb-2">
                   <div 
                     className="w-4 h-4 rounded-full mr-2"
                     style={{ backgroundColor: category.color }}
+                    role="presentation"
+                    aria-label={`${categoryName} 카테고리 색상`}
                   />
                   <h1 className="text-2xl font-bold text-[#212121]">{categoryName}</h1>
                 </div>
-                <p className="text-[#767676]">
+                <p className="text-[#767676]" role="contentinfo">
                   {categoryName} 카테고리의 최신 콘텐츠 {formattedArticles.length}개
                 </p>
-              </div>
-
-              {/* 아티클 목록 */}
-              <div className="grid grid-cols-1 gap-4">
-                {formattedArticles.map((article) => (
-                  <ContentCard
-                    key={article.id}
-                    id={article.slug}
-                    title={article.title}
-                    category={article.category}
-                    thumbnail={article.thumbnail}
-                    date={article.date}
-                  />
-                ))}
-              </div>
-
-              {formattedArticles.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-[#767676]">아직 이 카테고리에 콘텐츠가 없습니다.</p>
+                {/* 🔥 추가 SEO 정보 */}
+                <div className="sr-only">
+                  <span>픽틈의 {categoryName} 카테고리 페이지입니다. 총 {formattedArticles.length}개의 아티클이 있습니다.</span>
                 </div>
+              </header>
+
+              {/* 🔥 SEO 최적화된 아티클 목록 */}
+              {formattedArticles.length > 0 ? (
+                <section aria-label={`${categoryName} 카테고리 아티클 목록`}>
+                  <h2 className="sr-only">아티클 목록</h2>
+                  <div className="grid grid-cols-1 gap-4" role="list">
+                    {formattedArticles.map((article) => (
+                      <ContentCard
+                        key={article.id}
+                        id={article.slug}
+                        title={article.title}
+                        category={article.category}
+                        thumbnail={article.thumbnail}
+                        date={article.date}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : (
+                <section className="text-center py-12" role="status" aria-label="빈 카테고리 알림">
+                  <h2 className="text-lg font-semibold text-[#212121] mb-2">아직 콘텐츠가 없습니다</h2>
+                  <p className="text-[#767676]">
+                    {categoryName} 카테고리에 새로운 콘텐츠가 곧 업데이트될 예정입니다.
+                  </p>
+                </section>
               )}
             </main>
 

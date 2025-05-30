@@ -31,14 +31,16 @@ export async function GET() {
     const currentDate = new Date().toISOString()
     const totalPages = Math.ceil((count || 0) / POSTS_PER_PAGE)
 
-    // XML 생성
+    // XML 생성 - 🔥 SEO 최적화된 사이트맵
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <!-- 홈페이지 -->
   <url>
     <loc>${baseUrl}</loc>
     <lastmod>${currentDate}</lastmod>
-    <changefreq>daily</changefreq>
+    <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   
@@ -51,7 +53,7 @@ export async function GET() {
     <loc>${baseUrl}/page/${page}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>`
   }).join('\n')}
   
@@ -60,34 +62,40 @@ export async function GET() {
     <loc>${baseUrl}/about</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>${baseUrl}/terms</loc>
     <lastmod>${currentDate}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>${baseUrl}/privacy</loc>
     <lastmod>${currentDate}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>${baseUrl}/youth-policy</loc>
     <lastmod>${currentDate}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>${baseUrl}/contact</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/careers</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
   
-  <!-- 카테고리 페이지 -->
+  <!-- 🔥 카테고리 페이지 (SEO 중요도 향상) -->
   ${categories?.map(category => `  <url>
     <loc>${baseUrl}/category/${encodeURIComponent(category.name)}</loc>
     <lastmod>${currentDate}</lastmod>
@@ -95,18 +103,24 @@ export async function GET() {
     <priority>0.8</priority>
   </url>`).join('\n') || ''}
   
-  <!-- 아티클 페이지 -->
+  <!-- 🔥 아티클 페이지 (최고 우선순위) -->
   ${articles?.map(article => {
     const url = article.slug ? 
       `${baseUrl}/article/${article.slug}` : 
       `${baseUrl}/article/${article.id}`
     const lastmod = article.updated_at || article.published_at || article.created_at
     
+    // 최근 7일 내 아티클은 더 높은 우선순위
+    const publishDate = new Date(article.published_at || article.created_at)
+    const daysSincePublish = Math.floor((Date.now() - publishDate.getTime()) / (1000 * 60 * 60 * 24))
+    const priority = daysSincePublish <= 7 ? '0.95' : '0.9'
+    const changeFreq = daysSincePublish <= 7 ? 'daily' : 'weekly'
+    
     return `  <url>
     <loc>${url}</loc>
     <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>${changeFreq}</changefreq>
+    <priority>${priority}</priority>
   </url>`
   }).join('\n') || ''}
   
@@ -114,8 +128,16 @@ export async function GET() {
   <url>
     <loc>${baseUrl}/feed.xml</loc>
     <lastmod>${currentDate}</lastmod>
-    <changefreq>daily</changefreq>
+    <changefreq>hourly</changefreq>
     <priority>0.7</priority>
+  </url>
+  
+  <!-- 뉴스 사이트맵 -->
+  <url>
+    <loc>${baseUrl}/news-sitemap.xml</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>`
 
