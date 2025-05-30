@@ -2,6 +2,8 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Metadata } from "next"
+import { redirect, notFound } from 'next/navigation'
+import supabase from '@/lib/supabase'
 
 export default function TermsPage() {
   return (
@@ -162,4 +164,139 @@ export const metadata: Metadata = {
     creator: '@pickteum',
     site: '@pickteum',
   },
+}
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  try {
+    const { code } = await params
+    
+    // 코드 유효성 검사
+    if (!code || typeof code !== 'string' || code.length !== 6) {
+      return getDefaultMetadata()
+    }
+    
+    // 아티클 조회 - 카테고리 정보 포함
+    const { data: article, error } = await supabase
+      .from('articles')
+      .select(`
+        id,
+        title,
+        content,
+        summary,
+        thumbnail,
+        seo_title,
+        seo_description,
+        author,
+        tags,
+        published_at,
+        created_at,
+        updated_at,
+        short_code,
+        category_id,
+        category:categories(name)
+      `)
+      .eq('short_code', code)
+      .eq('status', 'published')
+      .single()
+    
+    if (error || !article) {
+      return getDefaultMetadata()
+    }
+
+    // SEO 제목 생성
+    const seoTitle = article.seo_title || article.title
+    const categoryName = (article.category as any)?.name
+    const titleWithCategory = categoryName ? `${seoTitle} - ${categoryName}` : seoTitle
+    
+    // SEO 설명 생성
+    let seoDescription = article.seo_description || article.summary
+    if (!seoDescription && article.content) {
+      const plainText = article.content.replace(/<[^>]*>/g, '').trim()
+      seoDescription = plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')
+    }
+    seoDescription = seoDescription || '픽틈에서 제공하는 유익한 콘텐츠입니다.'
+    
+    // 썸네일 URL 처리 (검증 없이)
+    let thumbnailUrl = 'https://www.pickteum.com/pickteum_og.png'
+    
+    if (article.thumbnail && typeof article.thumbnail === 'string' && article.thumbnail.trim() !== '') {
+      if (article.thumbnail.startsWith('http')) {
+        thumbnailUrl = article.thumbnail
+      } else if (article.thumbnail.startsWith('/')) {
+        thumbnailUrl = `https://www.pickteum.com${article.thumbnail}`
+      } else {
+        thumbnailUrl = `https://www.pickteum.com/${article.thumbnail}`
+      }
+    }
+
+    // 메타데이터 반환
+    return {
+      title: titleWithCategory,
+      description: seoDescription,
+      keywords: Array.isArray(article.tags) ? article.tags.join(', ') : '',
+      authors: [{ name: article.author || '픽틈' }],
+      openGraph: {
+        title: titleWithCategory,
+        description: seoDescription,
+        type: 'article',
+        publishedTime: article.published_at || article.created_at,
+        modifiedTime: article.updated_at,
+        authors: [article.author || '픽틈'],
+        section: categoryName,
+        tags: Array.isArray(article.tags) ? article.tags : [],
+        images: [
+          {
+            url: thumbnailUrl,
+            width: 1200,
+            height: 630,
+            alt: titleWithCategory,
+            type: 'image/png',
+          },
+        ],
+        url: `https://www.pickteum.com/s/${code}`,
+        siteName: '픽틈',
+        locale: 'ko_KR',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: titleWithCategory,
+        description: seoDescription,
+        images: [thumbnailUrl],
+        creator: '@pickteum',
+        site: '@pickteum',
+      },
+      alternates: {
+        canonical: `https://www.pickteum.com/article/${article.id}`,
+      },
+    }
+
+  } catch (error) {
+    console.error('메타데이터 생성 오류:', error)
+    return getDefaultMetadata()
+  }
+}
+
+function getDefaultMetadata(): Metadata {
+  return {
+    title: '틈 날 땐? 픽틈!',
+    description: '요청하신 콘텐츠를 찾을 수 없습니다.',
+    openGraph: {
+      title: '틈 날 땐? 픽틈!',
+      description: '틈새 시간을, 이슈 충전 타임으로!',
+      type: 'website',
+      images: [
+        {
+          url: 'https://www.pickteum.com/pickteum_og.png',
+          width: 1200,
+          height: 630,
+          alt: '틈 날 땐? 픽틈!',
+        },
+      ],
+      url: 'https://www.pickteum.com',
+      siteName: '픽틈',
+      locale: 'ko_KR',
+    },
+  }
 } 
