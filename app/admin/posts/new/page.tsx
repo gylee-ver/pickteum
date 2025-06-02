@@ -24,6 +24,7 @@ import supabase from "@/lib/supabase"
 import { ImageAltTipsModal } from "@/components/admin/ImageAltTipsModal"
 import { HelpCircle } from "lucide-react"
 import { SaveConfirmModal } from "@/components/admin/SaveConfirmModal"
+import { ImagePreviewModal } from "@/components/admin/ImagePreviewModal"
 
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const CATEGORIES = [
@@ -70,6 +71,10 @@ export default function NewPostPage() {
   const [savedArticleId, setSavedArticleId] = useState<string | null>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
+  const [showImagePreview, setShowImagePreview] = useState(false)
+  const [pendingImageUrl, setPendingImageUrl] = useState('')
+  const [pendingFileName, setPendingFileName] = useState('')
+  const [pendingImagePath, setPendingImagePath] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -288,7 +293,7 @@ export default function NewPostPage() {
     imageInputRef.current?.click()
   }
 
-  // 이미지 파일 업로드 처리
+  // 🔥 개선된 이미지 파일 업로드 처리
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -339,33 +344,15 @@ export default function NewPostPage() {
       const { data: publicUrlData } = bucket.getPublicUrl(filePath)
       const imageUrl = publicUrlData.publicUrl
       
-      // alt 텍스트 입력 필수화
-      setIsAltRequired(true)
-      const altText = await new Promise<string>((resolve) => {
-        const text = prompt("이미지 설명을 입력하세요 (필수):")
-        if (!text) {
-          toast({
-            variant: "destructive",
-            title: "alt 텍스트 필수",
-            description: "이미지 설명은 필수 입력 사항입니다.",
-          })
-          resolve("")
-          return
-        }
-        resolve(text)
-      })
-
-      if (!altText) {
-        // 업로드된 이미지 삭제
-        await bucket.remove([filePath])
-        return
-      }
-      
-      insertText("![", `](${imageUrl})`, altText)
+      // 🔥 미리보기 모달 표시를 위해 상태 설정
+      setPendingImageUrl(imageUrl)
+      setPendingFileName(file.name)
+      setPendingImagePath(filePath)
+      setShowImagePreview(true)
 
       toast({
-        title: "이미지가 삽입되었습니다.",
-        description: "이미지가 성공적으로 업로드되고 삽입되었습니다.",
+        title: "업로드 완료",
+        description: "이미지 설명을 입력해주세요.",
       })
 
     } catch (error) {
@@ -379,6 +366,60 @@ export default function NewPostPage() {
 
     if (e.target) {
       e.target.value = ''
+    }
+  }
+
+  // 🔥 이미지 삽입 확인 처리
+  const handleImageInsert = async (altText: string) => {
+    try {
+      if (!pendingImageUrl || !altText.trim()) {
+        return
+      }
+
+      // 에디터에 이미지 마크다운 삽입
+      insertText("![", `](${pendingImageUrl})`, altText)
+
+      toast({
+        title: "이미지가 삽입되었습니다.",
+        description: "이미지가 성공적으로 삽입되었습니다.",
+      })
+
+      // 상태 초기화
+      setPendingImageUrl('')
+      setPendingFileName('')
+      setPendingImagePath('')
+
+    } catch (error) {
+      console.error('이미지 삽입 오류:', error)
+      toast({
+        variant: "destructive",
+        title: "이미지 삽입 실패",
+        description: "이미지 삽입 중 오류가 발생했습니다.",
+      })
+    }
+  }
+
+  // 🔥 이미지 삽입 취소 처리
+  const handleImageCancel = async () => {
+    try {
+      // 업로드된 이미지 파일 삭제
+      if (pendingImagePath) {
+        const bucket = await useStorageBucket('article-thumbnails')
+        await bucket.remove([pendingImagePath])
+      }
+
+      // 상태 초기화
+      setPendingImageUrl('')
+      setPendingFileName('')
+      setPendingImagePath('')
+
+      toast({
+        title: "이미지 삽입 취소",
+        description: "업로드된 이미지가 삭제되었습니다.",
+      })
+
+    } catch (error) {
+      console.error('이미지 삭제 오류:', error)
     }
   }
 
@@ -919,13 +960,153 @@ export default function NewPostPage() {
     }
   }
 
-  // 미리보기
+  // 🔥 편집 상태를 임시 저장하는 함수
+  const saveToLocalStorage = () => {
+    const editData = {
+      title,
+      content,
+      category,
+      seoTitle,
+      seoDescription,
+      tags,
+      slug,
+      author,
+      status,
+      publishDate: publishDate?.toISOString(),
+      publishTime,
+      thumbnail,
+      altText,
+      timestamp: Date.now()
+    }
+    
+    localStorage.setItem('pickteum_draft_new', JSON.stringify(editData))
+    console.log('🔍 편집 상태 임시 저장됨')
+  }
+
+  // 🔥 localStorage에서 편집 상태 복원하는 함수
+  const loadFromLocalStorage = () => {
+    try {
+      const saved = localStorage.getItem('pickteum_draft_new')
+      if (saved) {
+        const editData = JSON.parse(saved)
+        
+        // 1시간 이내의 데이터만 복원
+        if (Date.now() - editData.timestamp < 3600000) {
+          setTitle(editData.title || '')
+          setContent(editData.content || '')
+          setCategory(editData.category || '')
+          setSeoTitle(editData.seoTitle || '')
+          setSeoDescription(editData.seoDescription || '')
+          setTags(editData.tags || '')
+          setSlug(editData.slug || '')
+          setAuthor(editData.author || '픽틈 스포츠이슈팀')
+          setStatus(editData.status || 'published')
+          setPublishTime(editData.publishTime || '09:00')
+          setThumbnail(editData.thumbnail || null)
+          setAltText(editData.altText || '')
+          
+          if (editData.publishDate) {
+            setPublishDate(new Date(editData.publishDate))
+          }
+          
+          console.log('🔍 편집 상태 복원됨')
+          
+          toast({
+            title: "편집 상태 복원",
+            description: "이전 편집 내용이 복원되었습니다.",
+          })
+        }
+      }
+    } catch (error) {
+      console.error('편집 상태 복원 오류:', error)
+    }
+  }
+
+  // 🔥 페이지 로드 시 편집 상태 복원
+  useEffect(() => {
+    loadFromLocalStorage()
+  }, [])
+
+  // 🔥 세션 스토리지를 사용한 안전한 미리보기 함수
   const handlePreview = () => {
-    // 실제 구현 시 미리보기 페이지로 이동
-    toast({
-      title: "미리보기",
-      description: "새 탭에서 미리보기가 열립니다.",
-    })
+    console.log('🔍 미리보기 버튼 클릭됨')
+    
+    // 필수 필드 검증
+    if (!title.trim()) {
+      toast({
+        title: "미리보기 오류",
+        description: "제목을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!content.trim()) {
+      toast({
+        title: "미리보기 오류", 
+        description: "내용을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    console.log('🔍 필수 필드 검증 통과')
+
+    try {
+      // 🔥 현재 편집 상태 저장
+      saveToLocalStorage()
+
+      // 카테고리 색상 찾기
+      const selectedCategory = categories.find(cat => cat.name === category)
+      const categoryColor = selectedCategory?.color || '#cccccc'
+
+      // 미리보기 데이터 준비
+      const previewData = {
+        title: title.trim(),
+        content: content.trim(),
+        category: category || '미분류',
+        categoryColor,
+        author: author || '픽틈',
+        thumbnail: thumbnail || null,
+        publishDate: publishDate ? format(publishDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        publishTime: publishTime || '09:00',
+        tags: tags || '',
+        altText: altText || `${title} 썸네일`,
+        returnUrl: window.location.pathname
+      }
+
+      console.log('🔍 미리보기 데이터 준비 완료:', previewData)
+
+      // 🔥 세션 스토리지에 데이터 저장 (URL 길이 제한 해결)
+      const previewId = `preview_${Date.now()}_${Math.random().toString(36).substring(2)}`
+      sessionStorage.setItem(previewId, JSON.stringify(previewData))
+      
+      console.log('🔍 세션 스토리지 저장 완료:', previewId)
+
+      // 🔥 미리보기 URL 생성 (간단한 ID만 전달)
+      const previewUrl = `/admin/preview?id=${previewId}`
+      
+      console.log('🔍 미리보기 URL 생성:', previewUrl)
+
+      // 미리보기 페이지로 이동
+      router.push(previewUrl)
+
+      console.log('🔍 미리보기 페이지로 이동 완료')
+
+      toast({
+        title: "미리보기",
+        description: "미리보기 페이지로 이동합니다.",
+      })
+
+    } catch (error) {
+      console.error('🔍 미리보기 오류:', error)
+      
+      toast({
+        title: "미리보기 오류",
+        description: `미리보기를 열 수 없습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+        variant: "destructive",
+      })
+    }
   }
 
   // 취소
@@ -1396,14 +1577,6 @@ export default function NewPostPage() {
                   className="hidden"
                   onChange={handleThumbnailUpload}
                 />
-                {/* 콘텐츠 이미지 업로드용 숨겨진 input */}
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
               </div>
 
               {thumbnail && (
@@ -1514,6 +1687,20 @@ export default function NewPostPage() {
         type="publish-confirm"
         onConfirm={handlePublishConfirm}
         onCancel={() => setShowPublishModal(false)}
+      />
+
+      {/* 🔥 이미지 미리보기 모달 추가 */}
+      <ImagePreviewModal
+        open={showImagePreview}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleImageCancel()
+          }
+          setShowImagePreview(open)
+        }}
+        onConfirm={handleImageInsert}
+        imageUrl={pendingImageUrl}
+        fileName={pendingFileName}
       />
     </AdminLayout>
   )

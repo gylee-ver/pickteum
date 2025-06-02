@@ -665,12 +665,52 @@ export default function EditPostPage() {
     }, 1500)
   }
 
-  // 미리보기
+  // 🔥 개선된 미리보기 함수
   const handlePreview = () => {
-    window.open(`/article/${articleId}`, "_blank")
+    // 필수 필드 검증
+    if (!title.trim()) {
+      toast({
+        title: "미리보기 오류",
+        description: "제목을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!content.trim()) {
+      toast({
+        title: "미리보기 오류", 
+        description: "내용을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 카테고리 색상 찾기
+    const selectedCategory = categories.find(cat => cat.name === category)
+    const categoryColor = selectedCategory?.color || '#cccccc'
+
+    // 미리보기 데이터 준비
+    const previewData = {
+      title,
+      content,
+      category: category || '미분류',
+      categoryColor,
+      author,
+      thumbnail,
+      publishDate: publishDate ? format(publishDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      publishTime,
+      tags,
+      altText: thumbnail ? `${title} 썸네일` : ''
+    }
+
+    // 🔥 새 탭에서 미리보기 열기 (기존 OG 메타 기능 보존)
+    const previewUrl = `/admin/preview?data=${encodeURIComponent(JSON.stringify(previewData))}`
+    window.open(previewUrl, '_blank', 'noopener,noreferrer')
+
     toast({
       title: "미리보기",
-      description: "새 탭에서 미리보기가 열립니다.",
+      description: "새 탭에서 미리보기가 열렸습니다.",
     })
   }
 

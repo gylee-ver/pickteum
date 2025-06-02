@@ -18,7 +18,7 @@ interface ContentCardProps {
   priority?: boolean
 }
 
-function getRelativeTime(publishedAt: string): string {
+function getRelativeTime(publishedAt: string, fallbackDate: string): string {
   const now = new Date()
   const published = new Date(publishedAt)
   const diffInSeconds = Math.floor((now.getTime() - published.getTime()) / 1000)
@@ -35,7 +35,7 @@ function getRelativeTime(publishedAt: string): string {
     const days = Math.floor(diffInSeconds / 86400)
     return `${days}일 전`
   } else {
-    return date
+    return fallbackDate
   }
 }
 
@@ -44,7 +44,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
   const [imageLoaded, setImageLoaded] = useState(false)
   const processedUrl = getImageUrl(thumbnail)
   
-  const relativeTime = publishedAt ? getRelativeTime(publishedAt) : null
+  const relativeTime = publishedAt ? getRelativeTime(publishedAt, date) : null
   
   return (
     <article className="block">
