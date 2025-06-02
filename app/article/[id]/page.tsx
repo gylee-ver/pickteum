@@ -9,13 +9,13 @@ import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 // 강제 동적 렌더링
 // export const dynamic = 'force-dynamic'
 
-// 수정된 설정
-export const revalidate = 60 // 60초마다 재검증
+// 🔥 수정된 설정 - 안정성 향상
+export const revalidate = 300 // 5분마다 재검증 (60초에서 증가)
 // 또는 완전히 제거
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 아티클 메타데이터 v3.0')
+  console.log('🔥 SEO 최적화 아티클 메타데이터 v4.0')
   
   try {
     const { id } = await params
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     console.log('🔥 데이터베이스 조회 시작:', id)
     
-    // 타임아웃 설정으로 크롤러 응답 최적화 - 콘텐츠도 포함해서 키워드 추출
+    // 🔥 타임아웃 증가로 안정성 향상 (3초 → 8초)
     const { data: article, error } = await Promise.race([
       supabase
         .from('articles')
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         .eq('id', id)
         .eq('status', 'published')
         .single(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
     ]) as any
     
     console.log('🔥 데이터베이스 결과:', { article: !!article, error: error?.message })

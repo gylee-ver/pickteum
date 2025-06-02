@@ -77,6 +77,26 @@ const nextConfig = {
         destination: '/category/테크',
         permanent: true,
       },
+      {
+        source: '/category/life',
+        destination: '/category/라이프',
+        permanent: true,
+      },
+      {
+        source: '/category/technology',
+        destination: '/category/테크',
+        permanent: true,
+      },
+      {
+        source: '/category/business',
+        destination: '/category/경제',
+        permanent: true,
+      },
+      {
+        source: '/category/news',
+        destination: '/category/정치/시사',
+        permanent: true,
+      },
     ]
   },
   async headers() {

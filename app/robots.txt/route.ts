@@ -32,6 +32,8 @@ Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
 Allow: /ads.txt
+# 🔥 단축 URL은 검색엔진 차단 (중복 콘텐츠 방지)
+Disallow: /s/
 Disallow: /admin/
 Disallow: /api/
 
@@ -50,11 +52,13 @@ User-agent: Yeti
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
+# 🔥 단축 URL은 검색엔진 차단
+Disallow: /s/
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 🔥 다음 검색로봇 (다음 웹마스터도구) - 강화된 설정
+# 🔥 다음 검색로봇 (다음 웹마스터도구)
 User-agent: Daum
 Allow: /
 Allow: /sitemap.xml
@@ -62,6 +66,8 @@ Allow: /news-sitemap.xml
 Allow: /sitemap-index.xml
 Allow: /category/
 Allow: /article/
+# 🔥 단축 URL은 검색엔진 차단
+Disallow: /s/
 Disallow: /admin/
 Disallow: /api/
 Disallow: /debug-meta
@@ -72,6 +78,8 @@ User-agent: Daumoa
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
+# 🔥 단축 URL은 검색엔진 차단
+Disallow: /s/
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
@@ -84,17 +92,18 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 Allow: /sitemap.xml
+# 🔥 단축 URL은 검색엔진 차단
+Disallow: /s/
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 단축 URL 크롤링 차단 (중복 콘텐츠 방지) - 검색엔진용
-User-agent: *
-Disallow: /s/
-Disallow: /test-short/
-
-# 🔥 소셜 미디어 크롤러는 허용 (공유 기능 유지)
+# 🔥 소셜 미디어 크롤러는 허용 (공유 기능 완전 보존)
 User-agent: facebookexternalhit
+Allow: /s/
+Allow: /
+
+User-agent: Facebot
 Allow: /s/
 Allow: /
 
@@ -103,6 +112,22 @@ Allow: /s/
 Allow: /
 
 User-agent: LinkedInBot
+Allow: /s/
+Allow: /
+
+User-agent: WhatsApp
+Allow: /s/
+Allow: /
+
+User-agent: Slackbot
+Allow: /s/
+Allow: /
+
+User-agent: TelegramBot
+Allow: /s/
+Allow: /
+
+User-agent: Discord
 Allow: /s/
 Allow: /`
 

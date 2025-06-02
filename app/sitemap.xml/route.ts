@@ -44,8 +44,8 @@ export async function GET() {
     <priority>1.0</priority>
   </url>
   
-  <!-- 페이지네이션 -->
-  ${Array.from({ length: Math.min(totalPages, 50) }, (_, i) => { // 최대 50페이지까지만
+  <!-- 🔥 페이지네이션 - 모든 페이지 포함 (제한 제거) -->
+  ${Array.from({ length: totalPages }, (_, i) => {
     const page = i + 1
     if (page === 1) return '' // 홈페이지와 중복 방지
     

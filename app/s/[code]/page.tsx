@@ -9,7 +9,7 @@ import { generateSocialMeta } from '@/lib/social-meta'
 
 // 수정 필요
 // export const dynamic = 'force-dynamic' // 이 줄 제거 또는 주석
-export const revalidate = 60 // 60초마다 재검증
+export const revalidate = 300 // 5분마다 재검증 (소셜 미디어 캐시 고려)
 
 // 기본 메타데이터 함수 (기존 유지)
 function getLibDefaultMetadata(): Metadata {
@@ -50,7 +50,7 @@ function isCrawler(userAgent: string): boolean {
 
 // 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v4.0')
+  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v5.0')
   
   try {
     const { code } = await params
@@ -59,23 +59,26 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       return getLibDefaultMetadata()
     }
     
-    // 단축 코드로 아티클 조회
-    const { data: article, error } = await supabase
-      .from('articles')
-      .select(`
-        id, 
-        title, 
-        content, 
-        seo_description, 
-        thumbnail, 
-        author, 
-        published_at, 
-        updated_at,
-        category:categories(name)
-      `)
-      .eq('short_code', code)
-      .eq('status', 'published')
-      .single()
+    // 🔥 타임아웃 증가로 안정성 향상
+    const { data: article, error } = await Promise.race([
+      supabase
+        .from('articles')
+        .select(`
+          id, 
+          title, 
+          content, 
+          seo_description, 
+          thumbnail, 
+          author, 
+          published_at, 
+          updated_at,
+          category:categories(name)
+        `)
+        .eq('short_code', code)
+        .eq('status', 'published')
+        .single(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+    ]) as any
     
     if (error || !article) {
       return getLibDefaultMetadata()
@@ -89,7 +92,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
     description = description || '픽틈 아티클'
     
-    // 🔥 단축 URL용 완전한 메타데이터 (소셜 미디어 공유 최적화)
+    // 🔥 단축 URL용 완전한 메타데이터 (소셜 미디어 공유 완전 보존)
     const metadata = {
       ...generateSocialMeta({
         title: article.title, // 브랜드명 없이 순수 제목만
@@ -103,9 +106,9 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         content: article.content, // 키워드 추출용
         categoryName: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name
       }),
-      // 🔥 색인 생성을 위해 robots 설정 변경 (소셜 미디어 기능은 그대로 유지)
+      // 🔥 robots.txt에서 검색엔진 차단하므로 여기서는 소셜 미디어용으로만 최적화
       robots: {
-        index: true, // 🔥 noindex 제거 - 색인 허용
+        index: false, // robots.txt에서 이미 차단됨
         follow: true,
       },
       // 🔥 단축 URL용 추가 설정

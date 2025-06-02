@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: { params: { name: string } })
   const baseDescription = `틈새 시간을, 이슈 충전 타임으로! 픽틈의 ${categoryName} 카테고리`
   const enhancedDescription = hasArticles 
     ? `${baseDescription}에서 ${articleCount}개의 최신 콘텐츠를 확인하세요. ${latestArticles?.slice(0, 2).map(a => a.title).join(', ')} 등 다양한 정보를 제공합니다.`
-    : `${baseDescription} 콘텐츠를 확인해보세요.`
+    : `${baseDescription} 콘텐츠를 확인해보세요. 곧 새로운 콘텐츠가 업데이트될 예정입니다.`
 
   return {
     title: `${categoryName} - 픽틈`,
@@ -78,11 +78,9 @@ export async function generateMetadata({ params }: { params: { name: string } })
     alternates: {
       canonical: `https://www.pickteum.com/category/${categoryName}`,
     },
-    robots: hasArticles ? {
-      index: true,
-      follow: true,
-    } : {
-      index: false,
+    // 🔥 빈 카테고리도 색인 허용 (콘텐츠 예정 메시지와 함께)
+    robots: {
+      index: true, // 모든 카테고리 색인 허용
       follow: true,
     },
     openGraph: {
