@@ -2,8 +2,7 @@ import { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
-import { generateSocialMeta } from '@/lib/social-meta'
-import { getLibDefaultMetadata } from '@/lib/metadata'
+import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
 // 최소한의 테스트 버전
 // export const dynamic = 'force-dynamic'
@@ -30,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const { code } = await params
     
     if (!code || typeof code !== 'string' || code.length !== 6) {
-      return getLibDefaultMetadata()
+      return getDefaultMetadata()
     }
     
     // 🔥 타임아웃 증가로 안정성 향상
@@ -55,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     ]) as any
     
     if (error || !article) {
-      return getLibDefaultMetadata()
+      return getDefaultMetadata()
     }
     
     // 설명 생성
@@ -97,7 +96,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     
   } catch (error) {
     console.error('🔥 메타데이터 생성 오류:', error)
-    return getLibDefaultMetadata()
+    return getDefaultMetadata()
   }
 }
 
