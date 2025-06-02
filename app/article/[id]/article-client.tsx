@@ -25,6 +25,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
   const router = useRouter()
   const [article, setArticle] = useState<any>(initialArticle)
   const [relatedArticles, setRelatedArticles] = useState<any[]>([])
+  const [popularArticles, setPopularArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialArticle)
   const [showShareModal, setShowShareModal] = useState(false)
   const [shortUrl, setShortUrl] = useState<string>('')
@@ -56,6 +57,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
       
       // 관련 아티클 로드
       loadRelatedArticles(initialArticle.category_id)
+      loadPopularArticles()
       setLoading(false)
     }
   }, [articleId, initialArticle])
@@ -96,6 +98,40 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
       }
     } catch (error) {
       console.error('관련 아티클 로드 오류:', error)
+    }
+  }
+
+  const loadPopularArticles = async () => {
+    try {
+      const { data: popularData, error } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          views,
+          category:categories(
+            name,
+            color
+          )
+        `)
+        .eq('status', 'published')
+        .neq('id', articleId)
+        .order('views', { ascending: false })
+        .limit(3)
+      
+      if (!error && popularData) {
+        setPopularArticles(popularData.map(article => ({
+          id: article.id,
+          title: article.title,
+          views: article.views || 0,
+          category: {
+            name: article.category?.name || '미분류',
+            color: article.category?.color || '#cccccc'
+          }
+        })))
+      }
+    } catch (error) {
+      console.error('인기 아티클 로드 오류:', error)
     }
   }
 
@@ -289,22 +325,86 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
               aria-label="아티클 본문"
             />
 
-            {/* 관련 콘텐츠 */}
-            {relatedArticles.length > 0 && (
-              <aside className="mt-12 mb-8" role="complementary" aria-label="관련 콘텐츠">
-                <h2 className="text-lg font-bold text-[#212121] mb-4">관련 콘텐츠</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {relatedArticles.map((relatedArticle) => (
-                    <ContentCard
-                      key={relatedArticle.id}
-                      id={relatedArticle.id}
-                      title={relatedArticle.title}
-                      category={relatedArticle.category}
-                      thumbnail={relatedArticle.thumbnail}
-                      date={relatedArticle.date}
-                    />
-                  ))}
-                </div>
+            {/* 🔥 개선된 내부 링킹 섹션 (기존 UI 스타일 유지) */}
+            {(relatedArticles.length > 0 || popularArticles.length > 0) && (
+              <aside className="mt-12 mb-8" role="complementary" aria-label="추천 콘텐츠">
+                {/* 관련 콘텐츠 (기존 유지) */}
+                {relatedArticles.length > 0 && (
+                  <section className="mb-8">
+                    <h2 className="text-lg font-bold text-[#212121] mb-4">관련 콘텐츠</h2>
+                    <div className="grid grid-cols-1 gap-4">
+                      {relatedArticles.map((relatedArticle) => (
+                        <ContentCard
+                          key={relatedArticle.id}
+                          id={relatedArticle.id}
+                          title={relatedArticle.title}
+                          category={relatedArticle.category}
+                          thumbnail={relatedArticle.thumbnail}
+                          date={relatedArticle.date}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* 🔥 인기 콘텐츠 추가 (내부 링킹 강화) */}
+                {popularArticles.length > 0 && (
+                  <section className="mb-8">
+                    <h2 className="text-lg font-bold text-[#212121] mb-4">인기 콘텐츠</h2>
+                    <div className="space-y-3">
+                      {popularArticles.map((popularArticle, index) => (
+                        <div 
+                          key={popularArticle.id}
+                          className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/article/${popularArticle.id}`)}
+                        >
+                          <div className="flex items-center justify-center w-6 h-6 bg-[#FFC83D] text-white text-xs font-bold rounded-full mr-3">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-sm font-medium text-[#212121] line-clamp-2 mb-1">
+                              {popularArticle.title}
+                            </h3>
+                            <div className="flex items-center text-xs text-gray-500">
+                              <span
+                                className="inline-block w-2 h-2 rounded-full mr-2"
+                                style={{ backgroundColor: popularArticle.category.color }}
+                              />
+                              <span>{popularArticle.category.name}</span>
+                              <span className="mx-1">·</span>
+                              <span>조회 {popularArticle.views.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* 🔥 카테고리 탐색 링크 추가 (내부 링킹 강화) */}
+                <section className="mb-8">
+                  <h2 className="text-lg font-bold text-[#212121] mb-4">카테고리 탐색</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { name: "건강", color: "#4CAF50" },
+                      { name: "스포츠", color: "#2196F3" },
+                      { name: "경제", color: "#FF9800" },
+                      { name: "테크", color: "#607D8B" },
+                    ].map((category) => (
+                      <button
+                        key={category.name}
+                        onClick={() => router.push(`/category/${category.name}`)}
+                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#FFC83D] hover:bg-[#FFF9E6] transition-colors"
+                      >
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="text-sm font-medium text-[#212121]">{category.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               </aside>
             )}
           </article>

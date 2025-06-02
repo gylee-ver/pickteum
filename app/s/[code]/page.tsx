@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
-import { generateSocialMeta, getDefaultMetadata as getLibDefaultMetadata } from '@/lib/social-meta'
+import { generateSocialMeta } from '@/lib/social-meta'
 
 // 최소한의 테스트 버전
 // export const dynamic = 'force-dynamic'
@@ -11,7 +11,19 @@ import { generateSocialMeta, getDefaultMetadata as getLibDefaultMetadata } from 
 // export const dynamic = 'force-dynamic' // 이 줄 제거 또는 주석
 export const revalidate = 60 // 60초마다 재검증
 
-// 크롤러 감지 함수
+// 기본 메타데이터 함수 (기존 유지)
+function getLibDefaultMetadata(): Metadata {
+  return {
+    title: '픽틈 - 틈새시간을 이슈충전 타임으로!',
+    description: '바쁜 일상 속 틈새시간에 만나는 핵심 이슈! 건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 뉴스와 콘텐츠를 제공합니다.',
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
+}
+
+// 크롤러 감지 함수 (기존 유지)
 function isCrawler(userAgent: string): boolean {
   const crawlerPatterns = [
     'facebookexternalhit',
@@ -36,38 +48,40 @@ function isCrawler(userAgent: string): boolean {
   return crawlerPatterns.some(pattern => lowerUserAgent.includes(pattern.toLowerCase()))
 }
 
-// 메타데이터 생성
+// 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   console.log('🔥 SEO 최적화 단축 URL 메타데이터 v4.0')
   
   try {
     const { code } = await params
-    console.log('🔥 받은 코드:', code)
     
-    if (!code || code.length !== 6) {
-      console.log('🔥 코드 검증 실패')
+    if (!code || typeof code !== 'string' || code.length !== 6) {
       return getLibDefaultMetadata()
     }
     
-    console.log('🔥 데이터베이스 조회 시작:', code)
-    
-    // 🔥 콘텐츠와 카테고리 정보도 함께 조회하여 키워드 추출
+    // 단축 코드로 아티클 조회
     const { data: article, error } = await supabase
       .from('articles')
-      .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
+      .select(`
+        id, 
+        title, 
+        content, 
+        seo_description, 
+        thumbnail, 
+        author, 
+        published_at, 
+        updated_at,
+        category:categories(name)
+      `)
       .eq('short_code', code)
       .eq('status', 'published')
       .single()
     
-    console.log('🔥 데이터베이스 결과:', { article: !!article, error: error?.message })
-    
     if (error || !article) {
-      console.log('🔥 아티클 없음, 기본 메타데이터 반환')
       return getLibDefaultMetadata()
     }
     
-    console.log('🔥 SEO 최적화 메타데이터 생성:', article.title)
-    
+    // 설명 생성
     let description = article.seo_description
     if (!description && article.content) {
       const plainText = article.content.replace(/<[^>]*>/g, '').trim()
@@ -75,7 +89,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
     description = description || '픽틈 아티클'
     
-    // 🔥 단축 URL에서도 완전한 메타데이터 제공 (소셜 미디어 공유 최적화)
+    // 🔥 단축 URL용 완전한 메타데이터 (소셜 미디어 공유 최적화)
     const metadata = {
       ...generateSocialMeta({
         title: article.title, // 브랜드명 없이 순수 제목만
@@ -89,6 +103,11 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         content: article.content, // 키워드 추출용
         categoryName: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name
       }),
+      // 🔥 색인 생성을 위해 robots 설정 변경 (소셜 미디어 기능은 그대로 유지)
+      robots: {
+        index: true, // 🔥 noindex 제거 - 색인 허용
+        follow: true,
+      },
       // 🔥 단축 URL용 추가 설정
       alternates: {
         canonical: `https://www.pickteum.com/article/${article.id}` // 정규 URL 설정
@@ -104,31 +123,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   }
 }
 
-// 기본 메타데이터 생성 함수
-function getDefaultMetadata(): Metadata {
-  return {
-    title: '틈 날 땐? 픽틈!',
-    description: '요청하신 콘텐츠를 찾을 수 없습니다.',
-    openGraph: {
-      title: '틈 날 땐? 픽틈!',
-      description: '틈새 시간을, 이슈 충전 타임으로!',
-      type: 'website',
-      images: [
-        {
-          url: 'https://www.pickteum.com/pickteum_og.png',
-          width: 1200,
-          height: 630,
-          alt: '틈 날 땐? 픽틈!',
-        },
-      ],
-      url: 'https://www.pickteum.com',
-      siteName: '픽틈',
-      locale: 'ko_KR',
-    },
-  }
-}
-
-// 페이지 컴포넌트 - 크롤러 감지 로직 추가
+// 페이지 컴포넌트 - 🔥 소셜 미디어 공유와 뒤로가기 기능 완전 보존
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   
@@ -136,7 +131,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     notFound()
   }
   
-  // User-Agent 확인
+  // User-Agent 확인 (기존 로직 유지)
   const headersList = await headers()
   const userAgent = headersList.get('user-agent') || ''
   
@@ -154,26 +149,29 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     notFound()
   }
   
-  // 조회수 증가 (백그라운드)
+  // 조회수 증가 (백그라운드 - 기존 유지)
   supabase
     .from('articles')
     .update({ views: (article.views || 0) + 1 })
     .eq('id', article.id)
     .then()
   
-  // 크롤러인 경우: 메타데이터를 읽을 수 있는 HTML 반환
+  // 🔥 크롤러인 경우: 색인 생성을 위한 개선된 HTML 반환 (소셜 미디어 기능 보존)
   if (isCrawler(userAgent)) {
-    console.log('🤖 크롤러 감지 - HTML 반환')
+    console.log('🤖 크롤러 감지 - 색인 최적화된 HTML 반환')
     return (
       <div style={{ display: 'none' }}>
         <h1>{article.title}</h1>
-        <meta name="robots" content="noindex" />
+        {/* 🔥 noindex 제거 - 색인 생성 허용하면서 소셜 미디어 메타데이터는 그대로 유지 */}
+        <meta name="robots" content="index, follow" />
+        <meta name="description" content={`${article.title} - 픽틈`} />
+        <link rel="canonical" href={`https://www.pickteum.com/article/${article.id}`} />
         {/* 크롤러가 메타데이터를 읽을 수 있도록 HTML 제공 */}
       </div>
     )
   }
   
-  // 일반 사용자인 경우: 즉시 리다이렉트
+  // 🔥 일반 사용자인 경우: 즉시 리다이렉트 (뒤로가기 기능 완전 보존)
   console.log('👤 일반 사용자 - 리다이렉트')
   redirect(`/article/${article.id}`)
 } 

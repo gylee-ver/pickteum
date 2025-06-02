@@ -36,18 +36,31 @@ export function extractKeywords(title: string, content?: string, categoryName?: 
   
   titleWords.forEach(word => keywords.add(word))
   
-  // 콘텐츠에서 키워드 추출 (있는 경우)
+  // 🔥 콘텐츠에서 키워드 추출 강화
   if (content) {
     const contentText = content.replace(/<[^>]*>/g, '').replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '')
+    
+    // 🔥 자주 등장하는 단어 우선 추출
+    const wordFreq = new Map<string, number>()
     const contentWords = contentText
       .split(/\s+/)
       .filter(word => word.length >= 2 && word.length <= 8)
-      .slice(0, 3) // 콘텐츠에서는 최대 3개
+      .filter(word => !['이다', '있다', '되다', '하다', '것이다', '그리고', '하지만', '때문에'].includes(word))
     
-    contentWords.forEach(word => keywords.add(word))
+    contentWords.forEach(word => {
+      wordFreq.set(word, (wordFreq.get(word) || 0) + 1)
+    })
+    
+    // 빈도수 기준으로 상위 3개 키워드 추출
+    const topWords = Array.from(wordFreq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([word]) => word)
+    
+    topWords.forEach(word => keywords.add(word))
   }
   
-  return Array.from(keywords).slice(0, 10) // 최대 10개 키워드
+  return Array.from(keywords).slice(0, 12) // 🔥 키워드 수 증가 (10 → 12)
 }
 
 // 🔥 SEO 친화적 메타 설명 생성
@@ -58,13 +71,38 @@ export function generateSEODescription(originalDescription: string, title: strin
     return `${title} | 틈새 시간을 이슈 충전 타임으로!${category} 관련 최신 뉴스와 정보를 픽틈에서 확인하세요.`
   }
   
-  // 기존 설명 개선 (끝에 브랜드 문구 추가)
-  const cleanDescription = originalDescription.trim()
+  // 🔥 설명 품질 개선
+  let cleanDescription = originalDescription.trim()
+  
+  // 불필요한 문구 제거
+  cleanDescription = cleanDescription
+    .replace(/^(픽틈|pickteum)\s*[-|]\s*/i, '')
+    .replace(/\s*[-|]\s*(픽틈|pickteum)$/i, '')
+  
+  // 적절한 길이로 조정
   if (cleanDescription.length > 140) {
-    return cleanDescription.substring(0, 140) + '... | 픽틈'
+    // 문장 단위로 자르기 시도
+    const sentences = cleanDescription.split(/[.!?]/)
+    let result = ''
+    for (const sentence of sentences) {
+      if ((result + sentence).length <= 140) {
+        result += sentence + '.'
+      } else {
+        break
+      }
+    }
+    if (result.length < 50) { // 너무 짧으면 글자 수로 자르기
+      result = cleanDescription.substring(0, 140) + '...'
+    }
+    cleanDescription = result
   }
   
-  return cleanDescription + (cleanDescription.endsWith('.') ? '' : '.') + ' | 픽틈'
+  // 브랜드명 추가
+  if (!cleanDescription.includes('픽틈')) {
+    cleanDescription += (cleanDescription.endsWith('.') ? '' : '.') + ' | 픽틈'
+  }
+  
+  return cleanDescription
 }
 
 export function generateSocialMeta(data: SocialMetaData) {
