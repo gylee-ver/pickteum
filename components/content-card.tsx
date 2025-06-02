@@ -12,7 +12,7 @@ interface ContentCardProps {
     name: string
     color: string
   }
-  thumbnail: string
+  thumbnail: string | null
   date: string
   priority?: boolean
 }
@@ -23,21 +23,9 @@ export default function ContentCard({ id, title, category, thumbnail, date, prio
   const processedUrl = getImageUrl(thumbnail)
   
   return (
-    <article className="w-full">
-      <Link href={`/article/${id}`} className="block">
-        <div className="w-full py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors rounded-lg">
-          <header className="flex items-start gap-3 mb-2">
-            <span
-              className="inline-block px-2 py-0.5 rounded-full text-xs text-white"
-              style={{ backgroundColor: category.color }}
-            >
-              {category.name}
-            </span>
-            <time className="text-xs text-[#767676] ml-auto">{date}</time>
-          </header>
-
-          <h2 className="text-base font-semibold text-[#212121] line-clamp-2 mb-2">{title}</h2>
-
+    <article className="block">
+      <Link href={`/article/${id}`} className="block hover:opacity-90 transition-opacity">
+        <div className="space-y-3">
           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
             {!imageLoaded && !imageError && (
               <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
@@ -63,12 +51,35 @@ export default function ContentCard({ id, title, category, thumbnail, date, prio
                   console.error('이미지 로드 실패:', processedUrl)
                   setImageError(true)
                 }}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAhEQACAQIHAQAAAAAAAAAAAAABAgADBAUREiExQVFhkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyugDKgSAASSccNqggjcElbOQp1XASQF1bgKs7Q2f8A/9k="
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                 <div className="text-gray-400 text-sm">이미지 없음</div>
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: category.color }}
+                aria-label={`${category.name} 카테고리`}
+              />
+              <span className="text-xs text-[#767676] font-medium">
+                {category.name}
+              </span>
+              <span className="text-xs text-[#767676]">·</span>
+              <time className="text-xs text-[#767676]" dateTime={date}>
+                {date}
+              </time>
+            </div>
+            
+            <h2 className="text-sm font-semibold text-[#212121] leading-tight line-clamp-2 hover:text-[#FFC83D] transition-colors">
+              {title}
+            </h2>
           </div>
         </div>
       </Link>

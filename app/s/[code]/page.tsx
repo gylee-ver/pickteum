@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
 import { generateSocialMeta } from '@/lib/social-meta'
+import { getLibDefaultMetadata } from '@/lib/metadata'
 
 // 최소한의 테스트 버전
 // export const dynamic = 'force-dynamic'
@@ -11,46 +12,19 @@ import { generateSocialMeta } from '@/lib/social-meta'
 // export const dynamic = 'force-dynamic' // 이 줄 제거 또는 주석
 export const revalidate = 300 // 5분마다 재검증 (소셜 미디어 캐시 고려)
 
-// 기본 메타데이터 함수 (기존 유지)
-function getLibDefaultMetadata(): Metadata {
-  return {
-    title: '픽틈 - 틈새시간을 이슈충전 타임으로!',
-    description: '바쁜 일상 속 틈새시간에 만나는 핵심 이슈! 건강, 스포츠, 경제, 정치, 라이프, 테크 등 다양한 분야의 뉴스와 콘텐츠를 제공합니다.',
-    robots: {
-      index: true,
-      follow: true,
-    },
-  }
-}
-
-// 크롤러 감지 함수 (기존 유지)
+// User-Agent 기반 크롤러 감지 함수 (기존 유지)
 function isCrawler(userAgent: string): boolean {
-  const crawlerPatterns = [
-    'facebookexternalhit',
-    'Facebot',
-    'Twitterbot',
-    'LinkedInBot',
-    'WhatsApp',
-    'Googlebot',
-    'bingbot',
-    'Slackbot',
-    'TelegramBot',
-    'Discord',
-    'Applebot',
-    'PinterestBot',
-    'redditbot',
-    'crawler',
-    'spider',
-    'bot'
+  const crawlers = [
+    'facebookexternalhit', 'Facebot', 'Twitterbot', 'LinkedInBot',
+    'WhatsApp', 'Slackbot', 'TelegramBot', 'Discord', 'Googlebot',
+    'Bingbot', 'YandexBot', 'DuckDuckBot'
   ]
-  
-  const lowerUserAgent = userAgent.toLowerCase()
-  return crawlerPatterns.some(pattern => lowerUserAgent.includes(pattern.toLowerCase()))
+  return crawlers.some(crawler => userAgent.toLowerCase().includes(crawler.toLowerCase()))
 }
 
 // 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v5.0')
+  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v6.0')
   
   try {
     const { code } = await params
@@ -106,10 +80,11 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         content: article.content, // 키워드 추출용
         categoryName: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name
       }),
-      // 🔥 robots.txt에서 검색엔진 차단하므로 여기서는 소셜 미디어용으로만 최적화
+      // 🔥 robots.txt에서 제한적 허용으로 변경됨에 따라 색인 허용
       robots: {
-        index: false, // robots.txt에서 이미 차단됨
+        index: true, // 🔥 색인 허용으로 변경
         follow: true,
+        noarchive: true, // 캐시된 버전은 차단 (중복 방지)
       },
       // 🔥 단축 URL용 추가 설정
       alternates: {
@@ -143,7 +118,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   
   const { data: article, error } = await supabase
     .from('articles')
-    .select('id, title, views')
+    .select('id, title, views, content, category:categories(name)')
     .eq('short_code', code)
     .eq('status', 'published')
     .single()
@@ -162,14 +137,63 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   // 🔥 크롤러인 경우: 색인 생성을 위한 개선된 HTML 반환 (소셜 미디어 기능 보존)
   if (isCrawler(userAgent)) {
     console.log('🤖 크롤러 감지 - 색인 최적화된 HTML 반환')
+    
+    // 콘텐츠 요약 생성
+    const contentSummary = article.content ? 
+      article.content.replace(/<[^>]*>/g, '').substring(0, 300) : 
+      `${article.title} - 픽틈에서 제공하는 ${article.category?.name || '뉴스'} 콘텐츠입니다.`
+    
     return (
-      <div style={{ display: 'none' }}>
-        <h1>{article.title}</h1>
-        {/* 🔥 noindex 제거 - 색인 생성 허용하면서 소셜 미디어 메타데이터는 그대로 유지 */}
-        <meta name="robots" content="index, follow" />
+      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'system-ui' }}>
+        <header>
+          <h1 style={{ fontSize: '24px', marginBottom: '10px', color: '#212121' }}>
+            {article.title}
+          </h1>
+          <p style={{ color: '#767676', marginBottom: '20px' }}>
+            카테고리: {article.category?.name || '뉴스'} | 픽틈
+          </p>
+        </header>
+        
+        <main>
+          <p style={{ lineHeight: '1.6', color: '#333333', marginBottom: '20px' }}>
+            {contentSummary}
+          </p>
+          
+          <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+            <p style={{ margin: '0', fontSize: '14px', color: '#666666' }}>
+              이 콘텐츠는 픽틈에서 제공하는 {article.category?.name || '뉴스'} 정보입니다.
+              전체 내용은 <a href={`https://www.pickteum.com/article/${article.id}`} style={{ color: '#007bff' }}>
+                원본 페이지
+              </a>에서 확인하실 수 있습니다.
+            </p>
+          </div>
+        </main>
+        
+        {/* SEO 최적화된 메타데이터 */}
+        <meta name="robots" content="index, follow, noarchive" />
         <meta name="description" content={`${article.title} - 픽틈`} />
         <link rel="canonical" href={`https://www.pickteum.com/article/${article.id}`} />
-        {/* 크롤러가 메타데이터를 읽을 수 있도록 HTML 제공 */}
+        
+        {/* 구조화된 데이터 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "NewsArticle",
+              "headline": article.title,
+              "description": contentSummary,
+              "url": `https://www.pickteum.com/article/${article.id}`,
+              "mainEntityOfPage": `https://www.pickteum.com/article/${article.id}`,
+              "publisher": {
+                "@type": "Organization",
+                "name": "픽틈",
+                "url": "https://www.pickteum.com"
+              },
+              "articleSection": article.category?.name || '뉴스'
+            })
+          }}
+        />
       </div>
     )
   }

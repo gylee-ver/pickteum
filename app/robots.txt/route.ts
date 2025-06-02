@@ -32,8 +32,9 @@ Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
 Allow: /ads.txt
-# 🔥 단축 URL은 검색엔진 차단 (중복 콘텐츠 방지)
-Disallow: /s/
+# 🔥 단축 URL 제한적 허용 (소셜 미디어 공유 완전 보존하면서 색인 최적화)
+Allow: /s/
+Disallow: /s/*?*
 Disallow: /admin/
 Disallow: /api/
 
@@ -52,8 +53,9 @@ User-agent: Yeti
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
-# 🔥 단축 URL은 검색엔진 차단
-Disallow: /s/
+# 🔥 단축 URL 제한적 허용
+Allow: /s/
+Disallow: /s/*?*
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
@@ -66,8 +68,9 @@ Allow: /news-sitemap.xml
 Allow: /sitemap-index.xml
 Allow: /category/
 Allow: /article/
-# 🔥 단축 URL은 검색엔진 차단
-Disallow: /s/
+# 🔥 단축 URL 제한적 허용
+Allow: /s/
+Disallow: /s/*?*
 Disallow: /admin/
 Disallow: /api/
 Disallow: /debug-meta
@@ -78,8 +81,9 @@ User-agent: Daumoa
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
-# 🔥 단축 URL은 검색엔진 차단
-Disallow: /s/
+# 🔥 단축 URL 제한적 허용
+Allow: /s/
+Disallow: /s/*?*
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
@@ -92,13 +96,14 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 Allow: /sitemap.xml
-# 🔥 단축 URL은 검색엔진 차단
-Disallow: /s/
+# 🔥 단축 URL 제한적 허용
+Allow: /s/
+Disallow: /s/*?*
 Disallow: /admin/
 Disallow: /api/
 Crawl-delay: 1
 
-# 🔥 소셜 미디어 크롤러는 허용 (공유 기능 완전 보존)
+# 🔥 소셜 미디어 크롤러는 완전 허용 (공유 기능 완전 보존)
 User-agent: facebookexternalhit
 Allow: /s/
 Allow: /

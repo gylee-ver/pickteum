@@ -102,8 +102,17 @@ export default function RootLayout({
         <OrganizationSchema />
         <WebsiteSchema />
         
-        {/* 🔥 모바일 최적화 메타태그 (중복 제거 및 통합) */}
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+        {/* 🔥 Core Web Vitals 최적화 - 리소스 힌트 */}
+        <link rel="preload" href="/pickteum_og.png" as="image" />
+        <link rel="preload" href="/pickteum_favicon.ico" as="image" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+        
+        {/* 🔥 모바일 최적화 메타태그 (CLS 방지) */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -111,21 +120,18 @@ export default function RootLayout({
         
         {/* 🔧 성능 최적화 메타태그 */}
         <meta name="theme-color" content="#F2FF66" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         
         {/* 🔥 구글 애드센스 메타태그 */}
         <meta name="google-adsense-account" content="ca-pub-6018069358099295" />
         
-        {/* 🔥 구글 애드센스 스크립트 */}
+        {/* 🔥 구글 애드센스 스크립트 (성능 최적화) */}
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295"
           strategy="afterInteractive"
           crossOrigin="anonymous"
         />
         
-        {/* Google Analytics 4 - 픽틈 맞춤 설정 */}
+        {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-8R9N5SG6WM"
           strategy="afterInteractive"
@@ -136,7 +142,7 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            // 🔥 픽틈 맞춤 GA4 설정
+            // 🔥 Core Web Vitals 최적화된 GA4 설정
             gtag('config', 'G-8R9N5SG6WM', {
               // 향상된 측정 활성화
               enhanced_measurements: {
@@ -151,20 +157,42 @@ export default function RootLayout({
               session_timeout: 1200, // 20분
               engagement_time_msec: 10000, // 10초 이상 체류시 참여로 간주
               
-              // 페이지뷰 수동 제어
-              send_page_view: false,
-              debug_mode: true, // 개발 중에만 활성화
+              // 성능 최적화
+              send_page_view: false, // 수동 제어로 성능 향상
+              debug_mode: false, // 프로덕션에서는 비활성화
+              
+              // 🔥 Core Web Vitals 측정
+              custom_map: {
+                'custom_parameter_1': 'page_type',
+                'custom_parameter_2': 'content_category'
+              }
             });
 
-            // 북극성 지표 추적용 전환 이벤트 설정
-            gtag('event', 'conversion', {
-              'send_to': 'G-8R9N5SG6WM/monthly_pageview_goal'
-            });
+            // 🔥 Core Web Vitals 측정 및 전송
+            function sendCoreWebVitals() {
+              if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((entryList) => {
+                  for (const entry of entryList.getEntries()) {
+                    gtag('event', 'core_web_vitals', {
+                      event_category: 'performance',
+                      metric_name: entry.name,
+                      metric_value: Math.round(entry.value),
+                      metric_rating: entry.rating || 'unknown'
+                    });
+                  }
+                });
+                
+                observer.observe({ entryTypes: ['largest-contentful-paint', 'first-input', 'layout-shift'] });
+              }
+            }
+            
+            // 페이지 로드 완료 후 측정 시작
+            window.addEventListener('load', sendCoreWebVitals);
           `}
         </Script>
 
-        {/* Hotjar Tracking Code */}
-        <Script id="hotjar" strategy="afterInteractive">
+        {/* Hotjar Tracking Code (성능 최적화) */}
+        <Script id="hotjar" strategy="lazyOnload">
           {`
             (function(h,o,t,j,a,r){
               h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
