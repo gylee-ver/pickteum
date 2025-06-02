@@ -14,18 +14,71 @@ interface ContentCardProps {
   }
   thumbnail: string | null
   date: string
+  publishedAt?: string
   priority?: boolean
 }
 
-export default function ContentCard({ id, title, category, thumbnail, date, priority = false }: ContentCardProps) {
+function getRelativeTime(publishedAt: string): string {
+  const now = new Date()
+  const published = new Date(publishedAt)
+  const diffInSeconds = Math.floor((now.getTime() - published.getTime()) / 1000)
+  
+  if (diffInSeconds < 60) {
+    return '방금 전'
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60)
+    return `${minutes}분 전`
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600)
+    return `${hours}시간 전`
+  } else if (diffInSeconds < 604800) {
+    const days = Math.floor(diffInSeconds / 86400)
+    return `${days}일 전`
+  } else {
+    return date
+  }
+}
+
+export default function ContentCard({ id, title, category, thumbnail, date, publishedAt, priority = false }: ContentCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const processedUrl = getImageUrl(thumbnail)
+  
+  const relativeTime = publishedAt ? getRelativeTime(publishedAt) : null
   
   return (
     <article className="block">
       <Link href={`/article/${id}`} className="block hover:opacity-90 transition-opacity">
         <div className="space-y-3">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: category.color }}
+                aria-label={`${category.name} 카테고리`}
+              />
+              <span className="text-xs text-[#767676] font-medium">
+                {category.name}
+              </span>
+              <span className="text-xs text-[#767676]">·</span>
+              <time className="text-xs text-[#767676]" dateTime={publishedAt || date}>
+                {date}
+              </time>
+              {relativeTime && relativeTime !== date && (
+                <>
+                  <span className="text-xs text-[#767676]">·</span>
+                  <span className="text-xs text-[#999999] font-normal">
+                    {relativeTime}
+                  </span>
+                </>
+              )}
+            </div>
+            
+            <h2 className="text-base font-semibold text-[#212121] leading-tight line-clamp-2 hover:text-[#FFC83D] transition-colors">
+              {title}
+            </h2>
+          </div>
+
           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
             {!imageLoaded && !imageError && (
               <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
@@ -59,27 +112,6 @@ export default function ContentCard({ id, title, category, thumbnail, date, prio
                 <div className="text-gray-400 text-sm">이미지 없음</div>
               </div>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: category.color }}
-                aria-label={`${category.name} 카테고리`}
-              />
-              <span className="text-xs text-[#767676] font-medium">
-                {category.name}
-              </span>
-              <span className="text-xs text-[#767676]">·</span>
-              <time className="text-xs text-[#767676]" dateTime={date}>
-                {date}
-              </time>
-            </div>
-            
-            <h2 className="text-sm font-semibold text-[#212121] leading-tight line-clamp-2 hover:text-[#FFC83D] transition-colors">
-              {title}
-            </h2>
           </div>
         </div>
       </Link>

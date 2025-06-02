@@ -143,7 +143,8 @@ export default function ContentFeed() {
           thumbnail: imageUrl,
           date: article.published_at ? 
             format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-            format(new Date(), 'yyyy.MM.dd', { locale: ko })
+            format(new Date(), 'yyyy.MM.dd', { locale: ko }),
+          publishedAt: article.published_at
         }
       })
       
@@ -156,7 +157,11 @@ export default function ContentFeed() {
       if (page === 1) {
         setContent(formattedData)
       } else {
-        setContent(prev => [...prev, ...formattedData])
+        setContent(prev => {
+          const existingIds = new Set(prev.map(item => item.id))
+          const newItems = formattedData.filter(item => !existingIds.has(item.id))
+          return [...prev, ...newItems]
+        })
       }
       
       // 더 불러올 데이터가 있는지 확인
@@ -186,11 +191,12 @@ export default function ContentFeed() {
   const scrollHandlerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    // 카테고리가 변경되면 스크롤을 맨 위로 이동하고 페이지 초기화
+    // 🔥 카테고리가 변경되면 확실하게 초기화
     window.scrollTo(0, 0)
     setPage(1)
-    // 콘텐츠 초기화하여 즉시 로딩 상태 표시
-    setContent([])
+    setContent([]) // 콘텐츠 완전 초기화
+    setError(false) // 에러 상태도 초기화
+    setHasMore(true) // hasMore 상태도 초기화
   }, [activeCategory])
 
   useEffect(() => {
@@ -244,18 +250,32 @@ export default function ContentFeed() {
   return (
     <div className="w-full relative">
       <PickteumTracker isHomePage={true} />
-        <div className="grid gap-4">
+        <div className="space-y-4">
           {displayedContent.map((item, index) => (
-            <ContentCard 
-              key={item.id} 
-              {...item} 
-              priority={index === 0}
-            />
+            <div key={item.id}>
+              <ContentCard
+                id={item.id}
+                title={item.title}
+                category={item.category}
+                thumbnail={item.thumbnail}
+                date={item.date}
+                publishedAt={item.publishedAt}
+                priority={index === 0}
+              />
+              {index < displayedContent.length - 1 && (
+                <hr className="border-gray-200 my-6" />
+              )}
+            </div>
           ))}
           {loading && (
             <>
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-              <Skeleton className="h-[120px] w-full rounded-lg" />
+              <div key="skeleton-1">
+                <Skeleton className="h-[120px] w-full rounded-lg" />
+                <div className="mt-4 border-b border-gray-100"></div>
+              </div>
+              <div key="skeleton-2">
+                <Skeleton className="h-[120px] w-full rounded-lg" />
+              </div>
             </>
           )}
         </div>
