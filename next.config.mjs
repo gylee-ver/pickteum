@@ -47,6 +47,36 @@ const nextConfig = {
         destination: 'https://www.pickteum.com/:path*',
         permanent: true,
       },
+      {
+        source: '/category/health',
+        destination: '/category/건강',
+        permanent: true,
+      },
+      {
+        source: '/category/sports',
+        destination: '/category/스포츠',
+        permanent: true,
+      },
+      {
+        source: '/category/politics',
+        destination: '/category/정치/시사',
+        permanent: true,
+      },
+      {
+        source: '/category/economy',
+        destination: '/category/경제',
+        permanent: true,
+      },
+      {
+        source: '/category/lifestyle',
+        destination: '/category/라이프',
+        permanent: true,
+      },
+      {
+        source: '/category/tech',
+        destination: '/category/테크',
+        permanent: true,
+      },
     ]
   },
   async headers() {

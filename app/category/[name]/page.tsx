@@ -9,9 +9,24 @@ import { ko } from "date-fns/locale"
 import { generateCategoryCollectionSchema, generateBreadcrumbSchema } from '@/lib/structured-data'
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
+// 🔥 영어 카테고리명을 한글로 매핑 (404 에러 해결)
+function getCategoryName(rawName: string): string {
+  const categoryMapping: { [key: string]: string } = {
+    'health': '건강',
+    'sports': '스포츠', 
+    'politics': '정치/시사',
+    'economy': '경제',
+    'lifestyle': '라이프',
+    'tech': '테크'
+  }
+  
+  const decodedName = decodeURIComponent(rawName)
+  return categoryMapping[decodedName.toLowerCase()] || decodedName
+}
+
 // 🔥 SEO 강화된 카테고리별 메타데이터 생성
 export async function generateMetadata({ params }: { params: { name: string } }): Promise<Metadata> {
-  const categoryName = decodeURIComponent(params.name)
+  const categoryName = getCategoryName(params.name)
   
   // 카테고리 존재 여부와 아티클 수 확인
   const { data: category, error: categoryError } = await supabase
@@ -61,7 +76,7 @@ export async function generateMetadata({ params }: { params: { name: string } })
     description: enhancedDescription.length > 160 ? enhancedDescription.substring(0, 157) + '...' : enhancedDescription,
     keywords: [categoryName, '픽틈', '뉴스', '이슈', '정보', ...(latestArticles?.slice(0, 3).map(a => a.title.split(' ')[0]) || [])].join(', '),
     alternates: {
-      canonical: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
+      canonical: `https://www.pickteum.com/category/${categoryName}`,
     },
     robots: hasArticles ? {
       index: true,
@@ -74,7 +89,7 @@ export async function generateMetadata({ params }: { params: { name: string } })
       title: `${categoryName} - 틈 날 땐? 픽틈!`,
       description: enhancedDescription,
       type: 'website',
-      url: `https://www.pickteum.com/category/${encodeURIComponent(categoryName.toLowerCase())}`,
+      url: `https://www.pickteum.com/category/${categoryName}`,
       siteName: '픽틈',
       images: [
         {
@@ -102,7 +117,7 @@ export async function generateMetadata({ params }: { params: { name: string } })
 }
 
 export default async function CategoryPage({ params }: { params: { name: string } }) {
-  const categoryName = decodeURIComponent(params.name)
+  const categoryName = getCategoryName(params.name)
   
   try {
     // 카테고리 정보 조회
@@ -155,7 +170,7 @@ export default async function CategoryPage({ params }: { params: { name: string 
     const categoryCollectionSchema = generateCategoryCollectionSchema(category, articles || [])
     const breadcrumbSchema = generateBreadcrumbSchema([
       { name: "홈", url: "https://www.pickteum.com" },
-      { name: categoryName, url: `https://www.pickteum.com/category/${categoryName.toLowerCase()}` }
+      { name: categoryName, url: `https://www.pickteum.com/category/${categoryName}` }
     ])
 
     return (
