@@ -23,7 +23,7 @@ function isCrawler(userAgent: string): boolean {
 
 // 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v6.0')
+  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v7.0 - 소셜 미디어 최적화')
   
   try {
     const { code } = await params
@@ -65,19 +65,31 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
     description = description || '픽틈 아티클'
     
+    // 🔥 이미지 URL 절대 경로 보장
+    const imageUrl = article.thumbnail 
+      ? (article.thumbnail.startsWith('http') 
+          ? article.thumbnail 
+          : `https://www.pickteum.com${article.thumbnail}`)
+      : 'https://www.pickteum.com/pickteum_og.png'
+    
+    // 🔥 카테고리 이름 안전하게 추출
+    const categoryName = Array.isArray(article.category) 
+      ? (article.category as any[])[0]?.name 
+      : (article.category as any)?.name
+    
     // 🔥 단축 URL용 완전한 메타데이터 (소셜 미디어 공유 완전 보존)
     const metadata = {
       ...generateSocialMeta({
         title: article.title, // 브랜드명 없이 순수 제목만
         description,
-        imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
+        imageUrl,
         url: `https://www.pickteum.com/article/${article.id}`, // 🔥 원본 아티클 URL로 설정
         type: 'article',
         publishedTime: article.published_at,
         modifiedTime: article.updated_at,
-        section: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name,
+        section: categoryName,
         content: article.content, // 키워드 추출용
-        categoryName: Array.isArray(article.category) ? article.category[0]?.name : article.category?.name
+        categoryName: categoryName
       }),
       // 🔥 robots.txt에서 제한적 허용으로 변경됨에 따라 색인 허용
       robots: {
@@ -91,7 +103,12 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       }
     }
     
-    console.log('🔥 SEO 최적화 메타데이터 생성 완료')
+    console.log('🔥 SEO 최적화 메타데이터 생성 완료', {
+      title: metadata.title,
+      imageUrl: metadata.openGraph?.images?.[0]?.url,
+      shortCode: code,
+      articleId: article.id
+    })
     return metadata
     
   } catch (error) {
@@ -133,6 +150,11 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     .eq('id', article.id)
     .then()
   
+  // 🔥 카테고리 이름 안전하게 추출 (공통 사용)
+  const categoryName = Array.isArray(article.category) 
+    ? (article.category as any[])[0]?.name 
+    : (article.category as any)?.name
+  
   // 🔥 크롤러인 경우: 색인 생성을 위한 개선된 HTML 반환 (소셜 미디어 기능 보존)
   if (isCrawler(userAgent)) {
     console.log('🤖 크롤러 감지 - 색인 최적화된 HTML 반환')
@@ -140,7 +162,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     // 콘텐츠 요약 생성
     const contentSummary = article.content ? 
       article.content.replace(/<[^>]*>/g, '').substring(0, 300) : 
-      `${article.title} - 픽틈에서 제공하는 ${article.category?.name || '뉴스'} 콘텐츠입니다.`
+      `${article.title} - 픽틈에서 제공하는 ${categoryName || '뉴스'} 콘텐츠입니다.`
     
     return (
       <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'system-ui' }}>
@@ -149,7 +171,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
             {article.title}
           </h1>
           <p style={{ color: '#767676', marginBottom: '20px' }}>
-            카테고리: {article.category?.name || '뉴스'} | 픽틈
+            카테고리: {categoryName || '뉴스'} | 픽틈
           </p>
         </header>
         
@@ -160,7 +182,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
           
           <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
             <p style={{ margin: '0', fontSize: '14px', color: '#666666' }}>
-              이 콘텐츠는 픽틈에서 제공하는 {article.category?.name || '뉴스'} 정보입니다.
+              이 콘텐츠는 픽틈에서 제공하는 {categoryName || '뉴스'} 정보입니다.
               전체 내용은 <a href={`https://www.pickteum.com/article/${article.id}`} style={{ color: '#007bff' }}>
                 원본 페이지
               </a>에서 확인하실 수 있습니다.
@@ -189,7 +211,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
                 "name": "픽틈",
                 "url": "https://www.pickteum.com"
               },
-              "articleSection": article.category?.name || '뉴스'
+              "articleSection": categoryName || '뉴스'
             })
           }}
         />

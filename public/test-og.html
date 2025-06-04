@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>픽틈 OG 태그 테스트</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .url-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 픽틈 소셜 미디어 OG 태그 테스트</h1>
+    
+    <div class="test-section">
+        <h2>📋 테스트할 URL 입력</h2>
+        <input type="text" id="testUrl" class="url-input" placeholder="https://www.pickteum.com/article/[id] 또는 https://www.pickteum.com/s/[code]" value="https://www.pickteum.com">
+        <br>
+        <button class="btn" onclick="testOpenGraph()">🔍 OG 태그 테스트</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🛠️ 소셜 미디어 디버깅 도구</h2>
+        <p>다음 공식 도구들을 사용하여 메타데이터를 검증하세요:</p>
+        
+        <a href="https://developers.facebook.com/tools/debug/" target="_blank" class="btn">📘 Facebook 공유 디버거</a>
+        <a href="https://cards-dev.twitter.com/validator" target="_blank" class="btn">🐦 Twitter Card 검증기</a>
+        <a href="https://www.linkedin.com/post-inspector/" target="_blank" class="btn">💼 LinkedIn Post Inspector</a>
+        <a href="https://www.opengraph.xyz/" target="_blank" class="btn">🌐 Open Graph Tester</a>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 테스트 결과</h2>
+        <div id="testResults">
+            <p>위의 "OG 태그 테스트" 버튼을 클릭하거나 소셜 미디어 디버깅 도구를 사용하여 테스트하세요.</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ 해결된 문제점들</h2>
+        <ul>
+            <li class="success">✓ 이미지 URL을 절대 경로로 변경 (https://www.pickteum.com/pickteum_og.png)</li>
+            <li class="success">✓ 소셜 미디어 크롤러의 모든 페이지 접근 허용 (robots.txt)</li>
+            <li class="success">✓ 동적 메타데이터 생성 로직 개선</li>
+            <li class="success">✓ 단축 URL과 일반 아티클 URL 모두 지원</li>
+            <li class="success">✓ 이미지 캐시 버스팅 로직 추가</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 테스트 권장사항</h2>
+        <ol>
+            <li>먼저 홈페이지: <code>https://www.pickteum.com</code></li>
+            <li>기존 아티클 페이지: <code>https://www.pickteum.com/article/[UUID]</code></li>
+            <li>단축 URL: <code>https://www.pickteum.com/s/[6자리코드]</code></li>
+            <li>카테고리 페이지: <code>https://www.pickteum.com/category/[카테고리명]</code></li>
+        </ol>
+    </div>
+
+    <script>
+        function testOpenGraph() {
+            const url = document.getElementById('testUrl').value;
+            const resultsDiv = document.getElementById('testResults');
+            
+            if (!url) {
+                resultsDiv.innerHTML = '<p class="error">❌ URL을 입력해주세요.</p>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = `
+                <h3>🔍 테스트 중인 URL: ${url}</h3>
+                <p>📋 메타데이터 확인을 위해 다음 단계를 수행하세요:</p>
+                <ol>
+                    <li>위의 소셜 미디어 디버깅 도구 버튼을 클릭</li>
+                    <li>해당 도구에서 URL 입력: <strong>${url}</strong></li>
+                    <li>Debug/Test/Inspect 버튼 클릭</li>
+                    <li>Open Graph 이미지, 제목, 설명이 올바르게 표시되는지 확인</li>
+                </ol>
+                
+                <h4>🎯 확인해야 할 요소들:</h4>
+                <ul>
+                    <li>og:title - 페이지 제목</li>
+                    <li>og:description - 페이지 설명</li>
+                    <li>og:image - 이미지 (1200x630px)</li>
+                    <li>og:url - 정확한 URL</li>
+                    <li>twitter:card - summary_large_image</li>
+                </ul>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 4px;">
+                    <strong>💡 팁:</strong> Facebook 공유 디버거에서 "Scrape Again" 버튼을 여러 번 클릭하여 캐시를 완전히 새로고침하세요.
+                </div>
+            `;
+        }
+        
+        // 페이지 로드 시 현재 도메인으로 기본값 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('testUrl');
+            if (urlInput.value === 'https://www.pickteum.com') {
+                // 실제 도메인으로 업데이트
+                urlInput.value = window.location.origin || 'https://www.pickteum.com';
+            }
+        });
+    </script>
+</body>
+</html> 

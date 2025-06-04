@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     siteName: '픽틈',
     images: [
       {
-        url: '/pickteum_og.png',
+        url: 'https://www.pickteum.com/pickteum_og.png',
         width: 1200,
         height: 630,
         alt: '픽틈 - 틈새시간을 이슈충전 타임으로!',
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '픽틈 - 틈새시간을 이슈충전 타임으로!',
     description: '바쁜 일상 속 틈새시간에 만나는 핵심 이슈! 다양한 분야의 뉴스와 콘텐츠를 제공합니다.',
-    images: ['/pickteum_og.png'],
+    images: ['https://www.pickteum.com/pickteum_og.png'],
     creator: '@pickteum',
   },
   robots: {

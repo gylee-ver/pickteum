@@ -106,16 +106,27 @@ export function generateSEODescription(originalDescription: string, title: strin
 }
 
 export function generateSocialMeta(data: SocialMetaData) {
-  // 이미지 URL 검증 및 절대경로 보장
+  // 🔥 이미지 URL 검증 및 절대경로 보장 강화
   let validImageUrl = 'https://www.pickteum.com/pickteum_og.png'
   
   if (data.imageUrl) {
-    if (data.imageUrl.startsWith('http')) {
+    if (data.imageUrl.startsWith('http://') || data.imageUrl.startsWith('https://')) {
+      // 이미 절대 URL인 경우
       validImageUrl = data.imageUrl
     } else if (data.imageUrl.startsWith('/')) {
+      // 상대 경로인 경우 절대 URL로 변환
       validImageUrl = `https://www.pickteum.com${data.imageUrl}`
     } else {
+      // 다른 형태의 경로인 경우
       validImageUrl = `https://www.pickteum.com/${data.imageUrl}`
+    }
+    
+    // 🔥 소셜 미디어 크롤러를 위한 캐시 버스팅 매개변수 추가 (선택적)
+    // 이미지가 업데이트되었지만 캐시 때문에 이전 이미지가 표시되는 경우를 방지
+    if (!validImageUrl.includes('?') && !validImageUrl.includes('pickteum_og.png')) {
+      // 기본 OG 이미지가 아닌 경우에만 캐시 버스팅 적용
+      const timestamp = Math.floor(Date.now() / (1000 * 60 * 60)) // 1시간마다 변경
+      validImageUrl += `?v=${timestamp}`
     }
   }
 

@@ -15,7 +15,7 @@ export const revalidate = 300 // 5분마다 재검증 (60초에서 증가)
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 아티클 메타데이터 v4.0')
+  console.log('🔥 SEO 최적화 아티클 메타데이터 v5.0 - 소셜 미디어 최적화')
   
   try {
     const { id } = await params
@@ -59,6 +59,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
     description = description || '픽틈 아티클'
     
+    // 🔥 이미지 URL 절대 경로 보장
+    const imageUrl = article.thumbnail 
+      ? (article.thumbnail.startsWith('http') 
+          ? article.thumbnail 
+          : `https://www.pickteum.com${article.thumbnail}`)
+      : 'https://www.pickteum.com/pickteum_og.png'
+    
     // 🔥 개선된 SEO 메타데이터 생성
     const metadata = {
       ...generateSocialMeta({
@@ -66,7 +73,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
           `${article.title.substring(0, 50)}...` : 
           article.title,
         description,
-        imageUrl: article.thumbnail || 'https://www.pickteum.com/pickteum_og.png',
+        imageUrl,
         url: `https://www.pickteum.com/article/${id}`,
         type: 'article',
         publishedTime: article.published_at,
@@ -88,7 +95,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
     
-    console.log('🔥 SEO 최적화 메타데이터 생성 완료')
+    console.log('🔥 SEO 최적화 메타데이터 생성 완료', {
+      title: metadata.title,
+      imageUrl: metadata.openGraph?.images?.[0]?.url
+    })
     return metadata
     
   } catch (error) {
