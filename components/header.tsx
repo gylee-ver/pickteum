@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import supabase from "@/lib/supabase"
 import { logger } from "@/lib/utils"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 
 interface SearchResult {
   id: string
