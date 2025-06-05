@@ -86,6 +86,7 @@ export default function EditPostPage() {
   const [publishDate, setPublishDate] = useState<Date | undefined>(new Date())
   const [publishTime, setPublishTime] = useState("09:00")
   const [thumbnail, setThumbnail] = useState<string | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [isHtmlMode, setIsHtmlMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -400,10 +401,11 @@ export default function EditPostPage() {
   }
 
   // 썸네일 업로드 처리
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // 이미지 파일 검증
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
@@ -413,6 +415,7 @@ export default function EditPostPage() {
       return
     }
 
+    // 파일 크기 검증 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -422,18 +425,74 @@ export default function EditPostPage() {
       return
     }
 
+    // 🔥 파일 정보 저장
     setThumbnailFile(file)
 
+    // 🔥 미리보기용 base64 생성
     const reader = new FileReader()
     reader.onload = (e) => {
-      setThumbnail(e.target?.result as string)
+      setThumbnailPreview(e.target?.result as string)
     }
     reader.readAsDataURL(file)
+
+    // 🔥 즉시 Supabase에 업로드하여 실제 URL 생성
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `thumbnails/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('article-thumbnails')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('썸네일 업로드 오류:', uploadError)
+        toast({
+          variant: "destructive",
+          title: "썸네일 업로드 실패",
+          description: "썸네일 이미지 업로드 중 오류가 발생했습니다.",
+        })
+        return
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('article-thumbnails')
+        .getPublicUrl(filePath)
+      
+      setThumbnail(publicUrlData.publicUrl)
+      console.log('✅ 썸네일 업로드 성공:', publicUrlData.publicUrl)
+      
+      toast({
+        title: "썸네일 업로드 완료",
+        description: "이미지가 성공적으로 업로드되었습니다.",
+      })
+    } catch (uploadError) {
+      console.error('썸네일 업로드 예외:', uploadError)
+      toast({
+        variant: "destructive",
+        title: "썸네일 업로드 실패",
+        description: "썸네일 이미지 업로드 중 예외가 발생했습니다.",
+      })
+    }
   }
 
   // 저장 처리 (UPDATE)
   const handleSave = async (publish = false, forceStatus?: string, scheduledTime?: string) => {
     if (!originalArticle) return
+
+    // 🔥 Base64 데이터 검증 - 절대 저장하지 않음
+    if (thumbnailPreview && thumbnailPreview.startsWith('data:image/') && !thumbnail) {
+      toast({
+        variant: "destructive",
+        title: "썸네일 업로드 필요",
+        description: "이미지 업로드가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.",
+      })
+      setIsSaving(false)
+      return
+    }
 
     setIsSaving(true)
 
@@ -469,43 +528,8 @@ export default function EditPostPage() {
         return
       }
 
-      let thumbnailUrl = thumbnail
-
-      // 새로운 썸네일 파일이 있으면 업로드
-      if (thumbnailFile) {
-        try {
-          const fileExt = thumbnailFile.name.split('.').pop()
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
-          const filePath = `thumbnails/${fileName}`
-
-          const bucket = await useStorageBucket('article-thumbnails')
-          const { data: uploadData, error: uploadError } = await bucket.upload(filePath, thumbnailFile)
-
-          if (uploadError) {
-            console.error('썸네일 업로드 오류:', uploadError)
-            toast({
-              variant: "destructive",
-              title: "썸네일 업로드 실패",
-              description: "썸네일 이미지 업로드 중 오류가 발생했습니다.",
-            })
-            setIsSaving(false)
-            return
-          }
-
-          const { data: publicUrlData } = bucket.getPublicUrl(filePath)
-          thumbnailUrl = publicUrlData.publicUrl
-          console.log('썸네일 업로드 성공:', thumbnailUrl)
-        } catch (uploadError) {
-          console.error('썸네일 업로드 예외:', uploadError)
-          toast({
-            variant: "destructive",
-            title: "썸네일 업로드 실패",
-            description: "썸네일 이미지 업로드 중 예외가 발생했습니다.",
-          })
-          setIsSaving(false)
-          return
-        }
-      }
+      // 🔥 실제 썸네일 URL만 사용 (이미 업로드 완료된 URL 또는 기존 URL)
+      const finalThumbnailUrl = thumbnail || originalArticle.thumbnail || null
 
       // 카테고리 ID 찾기
       const selectedCategory = categories.find(cat => cat.name === category)
@@ -519,7 +543,7 @@ export default function EditPostPage() {
         author: author || originalArticle.author || '픽틈 스포츠이슈팀',
         slug: slug || title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
         status: forceStatus || (publish ? 'published' : status),
-        thumbnail: thumbnailUrl,
+        thumbnail: finalThumbnailUrl, // 🔥 실제 URL만 저장
         seo_title: seoTitle || title,
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],

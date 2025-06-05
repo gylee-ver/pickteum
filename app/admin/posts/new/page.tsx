@@ -59,7 +59,8 @@ export default function NewPostPage() {
   const [isPublished, setIsPublished] = useState(false)
   const [publishDate, setPublishDate] = useState<Date | undefined>(new Date())
   const [publishTime, setPublishTime] = useState("09:00")
-  const [thumbnail, setThumbnail] = useState<string | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [isHtmlMode, setIsHtmlMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -404,8 +405,13 @@ export default function NewPostPage() {
     try {
       // 업로드된 이미지 파일 삭제
       if (pendingImagePath) {
-        const bucket = await useStorageBucket('article-thumbnails')
-        await bucket.remove([pendingImagePath])
+        const { error } = await supabase.storage
+          .from('article-thumbnails')
+          .remove([pendingImagePath])
+        
+        if (error) {
+          console.error('이미지 삭제 오류:', error)
+        }
       }
 
       // 상태 초기화
@@ -470,14 +476,59 @@ export default function NewPostPage() {
       return
     }
 
+    // 🔥 파일 정보 저장 (실제 업로드용)
     setThumbnailFile(file)
 
+    // 🔥 미리보기용 base64 생성
     const reader = new FileReader()
     reader.onload = (e) => {
-      setThumbnail(e.target?.result as string)
+      setThumbnailPreview(e.target?.result as string)
       setIsAltRequired(true) // 썸네일 업로드 시 alt 텍스트 필수화
     }
     reader.readAsDataURL(file)
+
+    // 🔥 즉시 Supabase에 업로드하여 실제 URL 생성
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `thumbnails/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('article-thumbnails')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('썸네일 업로드 오류:', uploadError)
+        toast({
+          variant: "destructive",
+          title: "썸네일 업로드 실패",
+          description: "썸네일 이미지 업로드 중 오류가 발생했습니다.",
+        })
+        return
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('article-thumbnails')
+        .getPublicUrl(filePath)
+      
+      setThumbnailUrl(publicUrlData.publicUrl)
+      console.log('✅ 썸네일 업로드 성공:', publicUrlData.publicUrl)
+      
+      toast({
+        title: "썸네일 업로드 완료",
+        description: "이미지가 성공적으로 업로드되었습니다.",
+      })
+    } catch (uploadError) {
+      console.error('썸네일 업로드 예외:', uploadError)
+      toast({
+        variant: "destructive",
+        title: "썸네일 업로드 실패",
+        description: "썸네일 이미지 업로드 중 예외가 발생했습니다.",
+      })
+    }
   }
 
   // slug 중복 체크 및 고유한 slug 생성 함수
@@ -516,8 +567,19 @@ export default function NewPostPage() {
 
   // 저장 처리
   const handleSave = async (publish = false, force = false) => {
+    // 🔥 Base64 데이터 검증 - 절대 저장하지 않음
+    if (thumbnailPreview && thumbnailPreview.startsWith('data:image/') && !thumbnailUrl) {
+      toast({
+        variant: "destructive",
+        title: "썸네일 업로드 필요",
+        description: "이미지 업로드가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.",
+      })
+      setIsSaving(false)
+      return
+    }
+
     // alt 텍스트 검증
-    if (thumbnail && !altText.trim()) {
+    if (thumbnailUrl && !altText.trim()) {
       toast({
         variant: "destructive",
         title: "alt 텍스트 필수",
@@ -566,50 +628,8 @@ export default function NewPostPage() {
         return
       }
 
-      let thumbnailUrl = thumbnail
-
-      // 썸네일 파일이 있으면 업로드
-      if (thumbnailFile) {
-        try {
-          const fileExt = thumbnailFile.name.split('.').pop()
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
-          const filePath = `thumbnails/${fileName}`
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('article-thumbnails')
-            .upload(filePath, thumbnailFile, {
-              cacheControl: '3600',
-              upsert: false
-            })
-
-          if (uploadError) {
-            console.error('썸네일 업로드 오류:', uploadError)
-            toast({
-              variant: "destructive",
-              title: "썸네일 업로드 실패",
-              description: "썸네일 이미지 업로드 중 오류가 발생했습니다.",
-            })
-            setIsSaving(false)
-            return
-          }
-
-          const { data: publicUrlData } = supabase.storage
-            .from('article-thumbnails')
-            .getPublicUrl(filePath)
-          
-          thumbnailUrl = publicUrlData.publicUrl
-          console.log('썸네일 업로드 성공:', thumbnailUrl)
-        } catch (uploadError) {
-          console.error('썸네일 업로드 예외:', uploadError)
-          toast({
-            variant: "destructive",
-            title: "썸네일 업로드 실패",
-            description: "썸네일 이미지 업로드 중 예외가 발생했습니다.",
-          })
-          setIsSaving(false)
-          return
-        }
-      }
+      // 🔥 실제 썸네일 URL만 사용 (base64 절대 저장 안함)
+      const finalThumbnailUrl = thumbnailUrl || null
 
       // 카테고리 ID 찾기
       const selectedCategory = categories.find(cat => cat.name === category)
@@ -646,7 +666,7 @@ export default function NewPostPage() {
         author: author || '픽틈 스포츠이슈팀',
         slug: uniqueSlug,
         status: publish ? 'published' : 'draft',
-        thumbnail: thumbnailUrl,
+        thumbnail: finalThumbnailUrl, // 🔥 실제 URL만 저장
         thumbnail_alt: altText.trim() || null,
         seo_title: seoTitle || title,
         seo_description: seoDescription || '',
@@ -811,7 +831,7 @@ export default function NewPostPage() {
 
       console.log('✅ 필수 필드 검증 통과!')
 
-      let thumbnailUrl = thumbnail
+      let finalThumbnailUrl = thumbnailUrl
 
       // 썸네일 파일이 있으면 업로드
       if (thumbnailFile) {
@@ -843,8 +863,8 @@ export default function NewPostPage() {
             .from('article-thumbnails')
             .getPublicUrl(filePath)
           
-          thumbnailUrl = publicUrlData.publicUrl
-          console.log('✅ 썸네일 업로드 성공:', thumbnailUrl)
+          finalThumbnailUrl = publicUrlData.publicUrl
+          console.log('✅ 썸네일 업로드 성공:', finalThumbnailUrl)
         } catch (uploadError) {
           console.error('❌ 썸네일 업로드 예외:', uploadError)
           toast({
@@ -896,7 +916,7 @@ export default function NewPostPage() {
         author: author || '픽틈 스포츠이슈팀',
         slug: uniqueSlug,
         status: 'scheduled',
-        thumbnail: thumbnailUrl,
+        thumbnail: finalThumbnailUrl,
         seo_title: seoTitle || title,
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
@@ -974,7 +994,7 @@ export default function NewPostPage() {
       status,
       publishDate: publishDate?.toISOString(),
       publishTime,
-      thumbnail,
+      thumbnailUrl, // 🔥 실제 URL만 저장
       altText,
       timestamp: Date.now()
     }
@@ -1002,23 +1022,21 @@ export default function NewPostPage() {
           setAuthor(editData.author || '픽틈 스포츠이슈팀')
           setStatus(editData.status || 'published')
           setPublishTime(editData.publishTime || '09:00')
-          setThumbnail(editData.thumbnail || null)
+          setThumbnailUrl(editData.thumbnailUrl || null) // 🔥 실제 URL 복원
           setAltText(editData.altText || '')
           
           if (editData.publishDate) {
             setPublishDate(new Date(editData.publishDate))
           }
           
-          console.log('🔍 편집 상태 복원됨')
-          
           toast({
-            title: "편집 상태 복원",
-            description: "이전 편집 내용이 복원되었습니다.",
+            title: "임시 저장된 데이터 복원",
+            description: "이전에 작성 중이던 내용을 불러왔습니다.",
           })
         }
       }
     } catch (error) {
-      console.error('편집 상태 복원 오류:', error)
+      console.error('localStorage 복원 오류:', error)
     }
   }
 
@@ -1067,7 +1085,7 @@ export default function NewPostPage() {
         category: category || '미분류',
         categoryColor,
         author: author || '픽틈',
-        thumbnail: thumbnail || null,
+        thumbnail: thumbnailUrl || null,
         publishDate: publishDate ? format(publishDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         publishTime: publishTime || '09:00',
         tags: tags || '',
@@ -1547,15 +1565,25 @@ export default function NewPostPage() {
                 className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 cursor-pointer transition-colors duration-200"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {thumbnail ? (
+                {thumbnailPreview ? (
                   <div className="space-y-2">
                     <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-2 shadow-sm">
                       <Image
-                        src={thumbnail || "/placeholder.svg"}
+                        src={thumbnailPreview || "/placeholder.svg"}
                         alt="썸네일 미리보기"
                         fill
                         className="object-cover"
                       />
+                      {/* 🔥 업로드 상태 표시 */}
+                      {thumbnailUrl ? (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                          ✓ 업로드 완료
+                        </div>
+                      ) : (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                          업로드 중...
+                        </div>
+                      )}
                     </div>
                     <Button variant="outline" size="sm" className="text-xs">
                       <ImageIcon className="h-3 w-3 mr-1" /> 이미지 변경
@@ -1579,7 +1607,8 @@ export default function NewPostPage() {
                 />
               </div>
 
-              {thumbnail && (
+              {/* 🔥 업로드 완료된 경우에만 alt 텍스트 표시 */}
+              {thumbnailUrl && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="alt-text" className="flex items-center">
@@ -1596,6 +1625,9 @@ export default function NewPostPage() {
                   />
                   <p className="text-xs text-gray-500">
                     검색 엔진과 스크린 리더를 위한 이미지 설명 (필수 입력)
+                  </p>
+                  <p className="text-xs text-green-600">
+                    ✓ 이미지가 성공적으로 업로드되었습니다.
                   </p>
                 </div>
               )}
