@@ -86,18 +86,18 @@ export default function Header() {
     }
   }
 
-  // 검색 결과 클릭 시
-  const handleResultClick = (slug: string) => {
-    router.push(`/article/${slug}`)
+  // 검색 결과 클릭 시 - 🔥 slug 대신 id 사용
+  const handleResultClick = (articleId: string) => {
+    router.push(`/article/${articleId}`)
     setIsSearchOpen(false)
     setSearchQuery("")
     setSearchResults([])
   }
 
-  // 엔터 키로 검색
+  // 엔터 키로 검색 - 🔥 slug 대신 id 사용
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchResults.length > 0) {
-      handleResultClick(searchResults[0].slug)
+      handleResultClick(searchResults[0].id) // 🔥 변경: slug → id
     }
     if (e.key === 'Escape') {
       setIsSearchOpen(false)
@@ -163,7 +163,7 @@ export default function Header() {
                     {searchResults.map((result) => (
                       <div
                         key={result.id}
-                        onClick={() => handleResultClick(result.slug)}
+                        onClick={() => handleResultClick(result.id)}
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                       >
                         {result.thumbnail ? (
