@@ -109,7 +109,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         
         {/* 🔥 모바일 최적화 메타태그 (CLS 방지) */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
@@ -120,16 +119,6 @@ export default function RootLayout({
         
         {/* 🔧 성능 최적화 메타태그 */}
         <meta name="theme-color" content="#F2FF66" />
-        
-        {/* 🔥 구글 애드센스 메타태그 */}
-        <meta name="google-adsense-account" content="ca-pub-6018069358099295" />
-        
-        {/* 🔥 구글 애드센스 스크립트 (성능 최적화) */}
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295"
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-        />
         
         {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화) */}
         <Script
@@ -207,6 +196,9 @@ export default function RootLayout({
         
         {/* 네이버 서치어드바이저 메타태그 */}
         <meta name="naver-site-verification" content="42769cb438f20728e074ac6432888e234709d9af" />
+
+        {/* 🔥 구글 애드센스 계정 확인용 메타태그 */}
+        <meta name="google-adsense-account" content="ca-pub-6018069358099295" />
       </head>
       <body>
         {children}
