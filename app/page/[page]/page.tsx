@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button"
 const POSTS_PER_PAGE = 20
 
 // 페이지네이션 메타데이터 생성
-export async function generateMetadata({ params }: { params: { page: string } }): Promise<Metadata> {
-  const page = parseInt(params.page) || 1
+export async function generateMetadata({ params }: { params: Promise<{ page: string }> }): Promise<Metadata> {
+  const { page: pageParam } = await params
+  const page = parseInt(pageParam) || 1
   
   if (page < 1) {
     notFound()
@@ -39,8 +40,9 @@ export async function generateMetadata({ params }: { params: { page: string } })
   }
 }
 
-export default async function PaginatedPage({ params }: { params: { page: string } }) {
-  const page = parseInt(params.page) || 1
+export default async function PaginatedPage({ params }: { params: Promise<{ page: string }> }) {
+  const { page: pageParam } = await params
+  const page = parseInt(pageParam) || 1
   
   if (page < 1) {
     notFound()

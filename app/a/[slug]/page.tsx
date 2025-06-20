@@ -1,13 +1,15 @@
 import { redirect } from 'next/navigation'
 import supabase from '@/lib/supabase'
 
-export default async function ShortUrlPage({ params }: { params: { slug: string } }) {
+export default async function ShortUrlPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
+    const { slug } = await params
+    
     // slug로 article 찾기
     const { data: article, error } = await supabase
       .from('articles')
       .select('id, slug')
-      .eq('slug', params.slug)
+      .eq('slug', slug)
       .eq('status', 'published')
       .single()
     

@@ -53,8 +53,9 @@ function getCategoryKeywords(categoryName: string): string[] {
 }
 
 // 🔥 SEO 강화된 카테고리별 메타데이터 생성
-export async function generateMetadata({ params }: { params: { name: string } }): Promise<Metadata> {
-  const categoryName = getCategoryName(params.name)
+export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
+  const { name } = await params
+  const categoryName = getCategoryName(name)
   
   // 카테고리 존재 여부와 아티클 수 확인
   const { data: category, error: categoryError } = await supabase
@@ -145,8 +146,9 @@ export async function generateMetadata({ params }: { params: { name: string } })
   }
 }
 
-export default async function CategoryPage({ params }: { params: { name: string } }) {
-  const categoryName = getCategoryName(params.name)
+export default async function CategoryPage({ params }: { params: Promise<{ name: string }> }) {
+  const { name } = await params
+  const categoryName = getCategoryName(name)
   
   try {
     // 카테고리 정보 조회
