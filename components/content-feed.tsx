@@ -11,24 +11,6 @@ import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
-// 백업용 샘플 데이터 (API 로드 실패 시 사용)
-const FALLBACK_CONTENT = [
-  {
-    id: "1",
-    title: "건강한 식습관으로 면역력 높이는 7가지 방법",
-    category: { name: "건강", color: "#4CAF50" },
-    thumbnail: "/healthy-food-spread.png",
-    date: "2025.05.10",
-  },
-  {
-    id: "2",
-    title: "2025 프로야구 시즌 전망: 주목해야 할 신인 선수들",
-    category: { name: "스포츠", color: "#2196F3" },
-    thumbnail: "/baseball-stadium.png",
-    date: "2025.05.09",
-  },
-]
-
 // 이미지 프리로딩 함수
 const preloadImages = (imageUrls: string[]) => {
   imageUrls.forEach(url => {
@@ -137,8 +119,8 @@ export default function ContentFeed() {
           id: article.id,
           title: article.title,
           category: {
-            name: article.categories?.name || '미분류',
-            color: article.categories?.color || '#cccccc'
+            name: (article as any).categories?.name || '미분류',
+            color: (article as any).categories?.color || '#cccccc'
           },
           thumbnail: imageUrl,
           date: article.published_at ? 
@@ -176,8 +158,8 @@ export default function ContentFeed() {
     }
   }
 
-  // 필터링된 콘텐츠
-  const filteredContent = content.length > 0 ? content : (error ? FALLBACK_CONTENT : [])
+  // 필터링된 콘텐츠 – 샘플 데이터를 노출하지 않고, 에러 시 빈 배열 반환
+  const filteredContent = content.length > 0 ? content : []
   
   // 전체 탭에서는 기본 5개만 표시
   const displayedContent = activeCategory === "전체" && page === 1 ? 

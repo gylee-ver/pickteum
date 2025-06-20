@@ -18,7 +18,7 @@ Sitemap: https://www.pickteum.com/news-sitemap.xml
 # 관리자 페이지 크롤링 방지
 Disallow: /admin/
 Disallow: /api/
-Disallow: /_next/static/
+# Disallow: /_next/static/ (구글 JS 차단 해제)
 Disallow: /debug-meta
 
 # 이미지 크롤링 허용
