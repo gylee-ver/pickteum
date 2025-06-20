@@ -120,15 +120,22 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
         .limit(3)
       
       if (!error && popularData) {
-        setPopularArticles(popularData.map(article => ({
-          id: article.id,
-          title: article.title,
-          views: article.views || 0,
-          category: {
-            name: article.category?.name || '미분류',
-            color: article.category?.color || '#cccccc'
-          }
-        })))
+        setPopularArticles(popularData.map(article => {
+          // category가 배열일 수 있으므로 안전하게 접근
+          const categoryData = Array.isArray(article.category) 
+            ? article.category[0] 
+            : article.category;
+            
+          return {
+            id: article.id,
+            title: article.title,
+            views: article.views || 0,
+            category: {
+              name: categoryData?.name || '미분류',
+              color: categoryData?.color || '#cccccc'
+            }
+          };
+        }))
       }
     } catch (error) {
       console.error('인기 아티클 로드 오류:', error)

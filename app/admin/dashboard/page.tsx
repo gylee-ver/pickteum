@@ -227,14 +227,21 @@ export default function DashboardPage() {
         return
       }
 
-      const formattedContent: PopularContent[] = (articles || []).map(article => ({
-        id: article.id,
-        title: article.title,
-        views: article.views || 0,
-        category: article.category?.name || '미분류',
-        categoryColor: article.category?.color || '#cccccc',
-        published_at: article.published_at
-      }))
+      const formattedContent: PopularContent[] = (articles || []).map(article => {
+        // category가 배열일 수 있으므로 안전하게 접근
+        const categoryData = Array.isArray(article.category) 
+          ? article.category[0] 
+          : article.category;
+        
+        return {
+          id: article.id,
+          title: article.title,
+          views: article.views || 0,
+          category: categoryData?.name || '미분류',
+          categoryColor: categoryData?.color || '#cccccc',
+          published_at: article.published_at
+        };
+      })
 
       setPopularContent(formattedContent)
       

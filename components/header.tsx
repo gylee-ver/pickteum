@@ -56,7 +56,18 @@ export default function Header() {
         logger.error('검색 오류:', error)
         setSearchResults([])
       } else {
-        setSearchResults(data || [])
+        // category가 배열일 수 있으므로 안전하게 변환
+        const formattedData = (data || []).map(article => {
+          const categoryData = Array.isArray(article.category) 
+            ? article.category[0] 
+            : article.category;
+          
+          return {
+            ...article,
+            category: categoryData || { name: '미분류', color: '#cccccc' }
+          };
+        });
+        setSearchResults(formattedData)
       }
     } catch (error) {
       logger.error('검색 중 예외 발생:', error)

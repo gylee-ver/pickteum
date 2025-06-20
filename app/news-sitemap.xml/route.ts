@@ -37,9 +37,12 @@ export async function GET() {
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 ${recentArticles?.map(article => {
   // 키워드 추출 (제목과 카테고리에서)
+  const categoryData = Array.isArray(article.category) 
+    ? article.category[0] 
+    : article.category;
   const keywords = [
-    article.category?.name || '',
-    ...article.title.split(' ').filter(word => word.length > 2).slice(0, 3)
+    categoryData?.name || '',
+    ...article.title.split(' ').filter((word: string) => word.length > 2).slice(0, 3)
   ].filter(Boolean).join(', ')
 
   // 설명 생성

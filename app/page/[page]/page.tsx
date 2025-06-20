@@ -84,17 +84,24 @@ export default async function PaginatedPage({ params }: { params: Promise<{ page
   }
 
   // 데이터 포맷팅
-  const formattedArticles = articles?.map(article => ({
-    id: article.slug || article.id,
-    title: article.title,
-    category: article.category || { name: '미분류', color: '#cccccc' },
-    thumbnail: article.thumbnail || '/placeholder.jpg',
-    date: format(
-      new Date(article.published_at || article.created_at),
-      'yyyy.MM.dd',
-      { locale: ko }
-    ),
-  })) || []
+  const formattedArticles = articles?.map(article => {
+    // category가 배열일 수 있으므로 안전하게 접근
+    const categoryData = Array.isArray(article.category) 
+      ? article.category[0] 
+      : article.category;
+      
+    return {
+      id: article.slug || article.id,
+      title: article.title,
+      category: categoryData || { name: '미분류', color: '#cccccc' },
+      thumbnail: article.thumbnail || '/placeholder.jpg',
+      date: format(
+        new Date(article.published_at || article.created_at),
+        'yyyy.MM.dd',
+        { locale: ko }
+      ),
+    };
+  }) || []
 
   return (
     <div className="flex min-h-screen flex-col bg-white">

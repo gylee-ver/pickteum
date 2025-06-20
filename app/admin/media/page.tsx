@@ -189,25 +189,28 @@ const handleStorageError = (error: any, context: string) => {
     'network error': '네트워크 연결을 확인해주세요.',
   }
   
-  const userMessage = Object.keys(errorMessages).find(key => 
+  const matchedKey = Object.keys(errorMessages).find(key => 
     error.message?.includes(key)
-  ) ? errorMessages[error.message] : '알 수 없는 오류가 발생했습니다.'
+  )
+  const userMessage = matchedKey 
+    ? errorMessages[matchedKey as keyof typeof errorMessages] 
+    : '알 수 없는 오류가 발생했습니다.'
   
   console.error(`${context}:`, error)
   return userMessage
 }
 
-// alt 텍스트 관리 강화
-const updateImageAltText = async (filePath: string, altText: string) => {
-  // 파일 메타데이터에 alt 텍스트 저장
-  const { error } = await supabase.storage
-    .from('article-thumbnails')
-    .update(filePath, {}, {
-      metadata: { alt_text: altText }
-    })
+// alt 텍스트 관리 강화 - 임시 비활성화
+// const updateImageAltText = async (filePath: string, altText: string) => {
+//   // 파일 메타데이터에 alt 텍스트 저장
+//   const { error } = await supabase.storage
+//     .from('article-thumbnails')
+//     .update(filePath, new File([], filePath), {
+//       metadata: { alt_text: altText }
+//     })
   
-  if (error) throw error
-}
+//   if (error) throw error
+// }
 
 // 이미지 최적화 정보 추가
 const getImageOptimizationInfo = (file: MediaFile) => {
@@ -357,7 +360,7 @@ export default function MediaLibraryPage() {
             let dimensions: string | undefined
             if (file.metadata?.mimetype?.startsWith('image/')) {
               try {
-              dimensions = await getImageDimensionsFromUrl(publicUrl)
+              dimensions = await getImageDimensionsFromUrl(publicUrl) || undefined
               } catch (error) {
                 console.warn(`파일 ${filePath}의 차원 정보 가져오기 실패:`, error)
               }
@@ -802,7 +805,7 @@ export default function MediaLibraryPage() {
   }
 
   // 키보드 네비게이션 지원
-  const handleKeyDown = (e: KeyboardEvent, fileId: string) => {
+  const handleKeyDown = (e: React.KeyboardEvent, fileId: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       showFileDetails(media.find(f => f.id === fileId)!)
