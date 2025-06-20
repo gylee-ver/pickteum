@@ -22,11 +22,11 @@ function isCrawler(userAgent: string): boolean {
 }
 
 // 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
-export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
   console.log('🔥 SEO 최적화 단축 URL 메타데이터 v7.0 - 소셜 미디어 최적화')
   
   try {
-    const { code } = await params
+    const { code } = params
     
     if (!code || typeof code !== 'string' || code.length !== 6) {
       return getDefaultMetadata()
@@ -118,8 +118,8 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 }
 
 // 페이지 컴포넌트 - 🔥 소셜 미디어 공유와 뒤로가기 기능 완전 보존
-export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params
+export default async function ShortCodePage({ params }: { params: { code: string } }) {
+  const { code } = params
   
   if (!code || typeof code !== 'string' || code.length !== 6) {
     notFound()

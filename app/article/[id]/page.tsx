@@ -14,11 +14,11 @@ export const revalidate = 300 // 5분마다 재검증 (60초에서 증가)
 // 또는 완전히 제거
 
 // SEO 최적화: generateMetadata 함수
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   console.log('🔥 SEO 최적화 아티클 메타데이터 v5.0 - 소셜 미디어 최적화')
   
   try {
-    const { id } = await params
+    const { id } = params
     console.log('🔥 받은 ID:', id)
     
     // UUID 검증 최적화
@@ -108,8 +108,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 // 서버 컴포넌트 (기존과 동일하지만 에러 처리 강화)
-export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function ArticlePage({ params }: { params: { id: string } }) {
+  const { id } = params
   console.log('🔍 페이지 컴포넌트:', { id })
   
   if (!id || typeof id !== 'string') {
