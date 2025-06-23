@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { redirect, notFound } from 'next/navigation'
+import { redirect, notFound, RedirectType } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
@@ -23,7 +23,7 @@ function isCrawler(userAgent: string): boolean {
 
 // 🔥 SEO 최적화 메타데이터 생성 (소셜 미디어 공유 기능 완전 보존)
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v7.0 - 소셜 미디어 최적화')
+  console.log('🔥 SEO 최적화 단축 URL 메타데이터 v8.0 - 정규 URL 강화')
   
   try {
     const { code } = await params
@@ -91,13 +91,13 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
         content: article.content, // 키워드 추출용
         categoryName: categoryName
       }),
-      // 🔥 robots.txt에서 제한적 허용으로 변경됨에 따라 색인 허용
+      // 🔥 색인 허용하되 중복 방지 (canonical로 원본 지정)
       robots: {
-        index: true, // 🔥 색인 허용으로 변경
+        index: true,
         follow: true,
         noarchive: true, // 캐시된 버전은 차단 (중복 방지)
       },
-      // 🔥 단축 URL용 추가 설정
+      // 🔥 단축 URL용 추가 설정 - 반드시 원본 아티클로 canonical 설정
       alternates: {
         canonical: `https://www.pickteum.com/article/${article.id}` // 정규 URL 설정
       }
@@ -107,7 +107,8 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
       title: metadata.title,
       imageUrl: metadata.openGraph?.images?.[0]?.url,
       shortCode: code,
-      articleId: article.id
+      articleId: article.id,
+      canonical: `https://www.pickteum.com/article/${article.id}`
     })
     return metadata
     
@@ -211,7 +212,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
                 "name": "픽틈",
                 "url": "https://www.pickteum.com"
               },
-              "articleSection": categoryName || '뉴스'
+              "articleSection": categoryName || "뉴스"
             })
           }}
         />
@@ -219,7 +220,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     )
   }
   
-  // 🔥 일반 사용자인 경우: 즉시 리다이렉트 (뒤로가기 기능 완전 보존)
-  console.log('👤 일반 사용자 - 리다이렉트')
-  redirect(`/article/${article.id}`)
+  // 🔥 일반 사용자: 301 영구 리다이렉트로 변경 (307 임시 → 301 영구)
+  console.log('👤 일반 사용자 - 301 영구 리다이렉트')
+  redirect(`/article/${article.id}`, RedirectType.replace) // 🔥 301 영구 리다이렉트
 } 

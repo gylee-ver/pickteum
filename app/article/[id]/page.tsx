@@ -137,13 +137,47 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       .single()
   }
 
-  const { data: article, error } = await query
+  // 🔥 개선된 에러 처리 - 재시도 로직 추가
+  let article = null
+  let error = null
+  
+  try {
+    const result = await Promise.race([
+      query,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 10000))
+    ]) as any
+    
+    article = result.data
+    error = result.error
+    
+    // 🔥 첫 번째 시도 실패 시 재시도 (네트워크 불안정 대응)
+    if (error && !article) {
+      console.log('🔄 데이터베이스 재시도 중...', error.message)
+      await new Promise(resolve => setTimeout(resolve, 1000)) // 1초 대기
+      
+      const retryResult = await query
+      article = retryResult.data
+      error = retryResult.error
+    }
+  } catch (timeoutError) {
+    console.error('⏰ 데이터베이스 타임아웃:', timeoutError)
+    error = timeoutError
+  }
   
   console.log('📊 페이지 데이터 조회:', { found: !!article, error: error?.message })
 
-  if (error || !article) {
-    console.log('❌ 아티클 없음, 404 반환')
-    notFound()
+  // 🔥 글이 존재하지 않는 경우에만 404 (DB 오류와 구분)
+  if (!article) {
+    if (error?.code === 'PGRST116' || error?.message?.includes('no rows')) {
+      // 실제로 글이 없는 경우
+      console.log('❌ 아티클 없음, 404 반환')
+      notFound()
+    } else {
+      // DB 연결 오류 등의 경우 - 임시 에러 페이지 대신 재시도 유도
+      console.error('🚨 데이터베이스 오류:', error)
+      // 임시적으로 기본 메타데이터로 처리하거나 에러 페이지로 이동
+      notFound() // 현재는 404로 처리하지만, 향후 500 에러 페이지로 개선 가능
+    }
   }
 
   // 조회수 증가 (백그라운드)

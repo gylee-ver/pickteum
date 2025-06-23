@@ -110,9 +110,9 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     alternates: {
       canonical: `https://www.pickteum.com/category/${categoryName}`,
     },
-    // 🔥 모든 카테고리 색인 허용 (콘텐츠 품질 개선으로)
+    // 🔥 콘텐츠가 없는 카테고리는 색인하지 않음 (SEO 품질 개선)
     robots: {
-      index: true,
+      index: hasArticles, // 아티클이 있을 때만 색인 허용
       follow: true,
     },
     openGraph: {

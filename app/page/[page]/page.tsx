@@ -21,6 +21,15 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
     notFound()
   }
   
+  // 🔥 전체 아티클 수 확인하여 빈 페이지 방지
+  const { count } = await supabase
+    .from('articles')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'published')
+
+  const totalPages = Math.ceil((count || 0) / POSTS_PER_PAGE)
+  const hasContent = page <= totalPages && (count || 0) > 0
+  
   const baseTitle = '픽틈 - 틈새시간을 이슈충전 타임으로'
   const title = page === 1 ? baseTitle : `${baseTitle} | ${page}페이지`
   
@@ -30,7 +39,12 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
     alternates: {
       canonical: `https://www.pickteum.com/page/${page}`,
       ...(page > 1 && { prev: `https://www.pickteum.com/page/${page - 1}` }),
-      ...(page < 100 && { next: `https://www.pickteum.com/page/${page + 1}` }) // 임시로 100페이지 제한
+      ...(page < totalPages && { next: `https://www.pickteum.com/page/${page + 1}` })
+    },
+    // 🔥 콘텐츠가 없는 페이지는 색인하지 않음 (SEO 품질 개선)
+    robots: {
+      index: hasContent, // 실제 콘텐츠가 있을 때만 색인 허용
+      follow: true,
     },
     openGraph: {
       title,
