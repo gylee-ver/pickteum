@@ -15,11 +15,17 @@ Sitemap: https://www.pickteum.com/sitemap-index.xml
 Sitemap: https://www.pickteum.com/sitemap.xml
 Sitemap: https://www.pickteum.com/news-sitemap.xml
 
-# 관리자 페이지 크롤링 방지
+# 🔥 SEO 최적화: 색인 가치가 없는 페이지 차단
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
-# Disallow: /_next/static/ (구글 JS 차단 해제)
 Disallow: /debug-meta
+# 🔥 빈 페이지네이션 및 오류 페이지 차단 (정규식 개선)
+Disallow: /page/
+Disallow: /*?page=
+Disallow: /*?error=
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 
 # 이미지 크롤링 허용
 User-agent: Googlebot-Image
@@ -35,8 +41,13 @@ Allow: /ads.txt
 # 🔥 단축 URL 제한적 허용 (소셜 미디어 공유 완전 보존하면서 색인 최적화)
 Allow: /s/
 Disallow: /s/*?*
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
+# 🔥 빈 페이지네이션 차단 (정규식 개선)
+Disallow: /page/
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 
 # 🔥 애드센스 크롤러 허용
 User-agent: Mediapartners-Google
@@ -56,8 +67,13 @@ Allow: /news-sitemap.xml
 # 🔥 단축 URL 제한적 허용
 Allow: /s/
 Disallow: /s/*?*
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
+# 🔥 빈 페이지네이션 차단 (정규식 개선)
+Disallow: /page/
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 Crawl-delay: 1
 
 # 🔥 다음 검색로봇 (다음 웹마스터도구)
@@ -71,9 +87,14 @@ Allow: /article/
 # 🔥 단축 URL 제한적 허용
 Allow: /s/
 Disallow: /s/*?*
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
 Disallow: /debug-meta
+# 🔥 빈 페이지네이션 차단 (정규식 개선)
+Disallow: /page/
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 Crawl-delay: 1
 
 # 🔥 추가: 다음카카오 모바일 검색로봇
@@ -84,8 +105,13 @@ Allow: /news-sitemap.xml
 # 🔥 단축 URL 제한적 허용
 Allow: /s/
 Disallow: /s/*?*
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
+# 🔥 빈 페이지네이션 차단 (정규식 개선)
+Disallow: /page/
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 Crawl-delay: 1
 
 # 구글 모바일 친화성 테스트 봇
@@ -99,8 +125,13 @@ Allow: /sitemap.xml
 # 🔥 단축 URL 제한적 허용
 Allow: /s/
 Disallow: /s/*?*
+Disallow: /404
 Disallow: /admin/
 Disallow: /api/
+# 🔥 빈 페이지네이션 차단 (정규식 개선)
+Disallow: /page/
+# 🔥 빈 카테고리 차단 추가
+Disallow: /*?empty=true
 Crawl-delay: 1
 
 # 🔥 소셜 미디어 크롤러는 완전 허용 (공유 기능 완전 보존)

@@ -69,7 +69,10 @@ interface MediaFile {
   uploadedBy: string
   uploadedAt: string
   usedIn: string[]
-  metadata?: any
+  metadata?: {
+    alt_text?: string
+    [key: string]: unknown
+  }
 }
 
 interface FolderInfo {

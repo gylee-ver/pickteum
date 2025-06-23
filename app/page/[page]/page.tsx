@@ -8,7 +8,6 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 const POSTS_PER_PAGE = 20
 

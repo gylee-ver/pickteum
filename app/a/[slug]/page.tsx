@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import supabase from '@/lib/supabase'
 
 export default async function ShortUrlPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -18,7 +18,6 @@ export default async function ShortUrlPage({ params }: { params: Promise<{ slug:
     }
     
     // 원본 URL로 리다이렉트
-    const { redirect } = await import('next/navigation')
     redirect(`/article/${article.id}`)
     
   } catch (error) {

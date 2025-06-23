@@ -76,19 +76,12 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   }
 
   // 해당 카테고리의 아티클 수와 최신 아티클 확인
-  const [{ count }, { data: latestArticles }] = await Promise.all([
+  const [{ count }] = await Promise.all([
     supabase
       .from('articles')
       .select('*', { count: 'exact', head: true })
       .eq('category_id', category.id)
-      .eq('status', 'published'),
-    supabase
-      .from('articles')
-      .select('title')
-      .eq('category_id', category.id)
       .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(3)
   ])
 
   const hasArticles = (count || 0) > 0

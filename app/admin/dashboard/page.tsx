@@ -48,6 +48,20 @@ interface PopularContent {
   published_at: string
 }
 
+interface DraftArticle {
+  id: string
+  title: string
+  author: string
+  updated_at: string
+}
+
+interface ScheduledArticle {
+  id: string
+  title: string
+  author: string
+  published_at: string
+}
+
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
 const MOCK_ANALYTICS = {
   today: {
@@ -197,8 +211,8 @@ function ActivityBadge({ type }: { type: string }) {
 export default function DashboardPage() {
   const [userName, setUserName] = useState<string | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
-  const [drafts, setDrafts] = useState<any[]>([])
-  const [scheduled, setScheduled] = useState<any[]>([])
+  const [drafts, setDrafts] = useState<DraftArticle[]>([])
+  const [scheduled, setScheduled] = useState<ScheduledArticle[]>([])
   const [popularContent, setPopularContent] = useState<PopularContent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()

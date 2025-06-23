@@ -2,7 +2,8 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Metadata } from "next"
-import { redirect, notFound } from 'next/navigation'
+import Header from "@/components/header"
+import Footer from "@/components/footer"
 
 export default function TermsPage() {
   return (

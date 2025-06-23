@@ -1,9 +1,8 @@
 import { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import supabase from "@/lib/supabase"
 import ArticleClient from './article-client'
 import ArticleSchema from '@/components/article-schema'
-import { RedirectType } from 'next/navigation'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
 // 강제 동적 렌더링

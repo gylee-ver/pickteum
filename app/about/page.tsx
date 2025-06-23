@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Link from "next/link"
+import Image from 'next/image'
 import { ArrowLeft, Users, Target, Award, Heart, Globe, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -58,10 +59,13 @@ export default function AboutPage() {
           {/* 히어로 섹션 */}
           <div className="text-center mb-8">
             <div className="mb-4">
-              <img
+              <Image
                 src="/logo_vec.png"
                 alt="Pickteum Logo"
+                width={120}
+                height={48}
                 className="h-12 w-auto mx-auto mb-4"
+                priority
               />
             </div>
             <h2 className="text-2xl font-bold text-[#212121] mb-2">틈 날 땐? 픽틈!</h2>

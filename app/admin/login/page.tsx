@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 // 모킹 데이터 - 실제 구현 시 API 호출로 대체
@@ -71,7 +71,7 @@ export default function LoginPage() {
           description: "아이디 또는 비밀번호를 확인해주세요.",
         })
       }
-    } catch (err) {
+    } catch {
       setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.")
       toast({
         variant: "destructive",

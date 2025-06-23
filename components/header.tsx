@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import supabase from "@/lib/supabase"
 import { logger } from "@/lib/utils"
-import { format } from "date-fns"
-import { ko } from "date-fns/locale"
+
 
 interface SearchResult {
   id: string
@@ -123,9 +123,11 @@ export default function Header() {
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
-            <img
+            <Image
               src="/logo_vec.png"
               alt="Pickteum Logo"
+              width={32}
+              height={32}
               className="h-8 w-auto"
             />
           </Link>
@@ -180,9 +182,11 @@ export default function Header() {
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                       >
                         {result.thumbnail ? (
-                          <img
+                          <Image
                             src={result.thumbnail}
                             alt={result.title}
+                            width={48}
+                            height={32}
                             className="w-12 h-8 object-cover rounded"
                           />
                         ) : (
