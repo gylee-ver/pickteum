@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import AdminLayout from "@/components/admin/layout"
 import { Button } from "@/components/ui/button"
+import SeoImage from "@/components/ui/seo-image"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -444,13 +445,15 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+                                  <div className="space-y-4">
                   <Label>로고</Label>
                   <div className="border rounded-md p-4 flex flex-col items-center">
                     <div className="bg-gray-100 p-4 rounded-md mb-4">
-                      <img
+                      <SeoImage
                         src={settings.general.logoUrl || "/placeholder.svg"}
                         alt="사이트 로고"
+                        width={64}
+                        height={64}
                         className="h-16 object-contain"
                       />
                     </div>
@@ -473,9 +476,11 @@ export default function SettingsPage() {
                   <Label>파비콘</Label>
                   <div className="border rounded-md p-4 flex flex-col items-center">
                     <div className="bg-gray-100 p-4 rounded-md mb-4">
-                      <img
+                      <SeoImage
                         src={settings.general.faviconUrl || "/placeholder.svg"}
                         alt="파비콘"
+                        width={64}
+                        height={64}
                         className="h-16 object-contain"
                       />
                     </div>

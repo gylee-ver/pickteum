@@ -1,8 +1,10 @@
 import { Metadata } from 'next'
+import { canonical } from '@/lib/metadata'
 
 export const metadata: Metadata = {
   title: '메타데이터 테스트',
   description: '틈새 시간을, 이슈 충전 타임으로! 이것은 OG 메타데이터 테스트 페이지입니다.',
+  ...canonical('/debug-meta'),
   openGraph: {
     title: '메타데이터 테스트',
     description: '틈새 시간을, 이슈 충전 타임으로! 이것은 OG 메타데이터 테스트 페이지입니다.',

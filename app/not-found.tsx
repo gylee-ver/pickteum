@@ -2,10 +2,12 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
+import { canonical } from '@/lib/metadata'
 
 export const metadata: Metadata = {
   title: '페이지를 찾을 수 없습니다 - 픽틈',
   description: '요청하신 페이지를 찾을 수 없습니다. 픽틈 홈페이지로 돌아가서 다른 콘텐츠를 확인해보세요.',
+  ...canonical('/404'),
   robots: {
     index: false,
     follow: false,

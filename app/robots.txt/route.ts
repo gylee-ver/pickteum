@@ -24,8 +24,9 @@ Disallow: /debug-meta
 Disallow: /page/
 Disallow: /*?page=
 Disallow: /*?error=
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 
 # 이미지 크롤링 허용
 User-agent: Googlebot-Image
@@ -46,8 +47,9 @@ Disallow: /admin/
 Disallow: /api/
 # 🔥 빈 페이지네이션 차단 (정규식 개선)
 Disallow: /page/
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 
 # 🔥 애드센스 크롤러 허용
 User-agent: Mediapartners-Google
@@ -72,8 +74,9 @@ Disallow: /admin/
 Disallow: /api/
 # 🔥 빈 페이지네이션 차단 (정규식 개선)
 Disallow: /page/
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 Crawl-delay: 1
 
 # 🔥 다음 검색로봇 (다음 웹마스터도구)
@@ -93,8 +96,9 @@ Disallow: /api/
 Disallow: /debug-meta
 # 🔥 빈 페이지네이션 차단 (정규식 개선)
 Disallow: /page/
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 Crawl-delay: 1
 
 # 🔥 추가: 다음카카오 모바일 검색로봇
@@ -110,8 +114,9 @@ Disallow: /admin/
 Disallow: /api/
 # 🔥 빈 페이지네이션 차단 (정규식 개선)
 Disallow: /page/
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 Crawl-delay: 1
 
 # 구글 모바일 친화성 테스트 봇
@@ -130,8 +135,9 @@ Disallow: /admin/
 Disallow: /api/
 # 🔥 빈 페이지네이션 차단 (정규식 개선)
 Disallow: /page/
-# 🔥 빈 카테고리 차단 추가
-Disallow: /*?empty=true
+# 🔥 빈 카테고리(게시글 0개) 공통 차단
+Disallow: /*?empty=
+Disallow: /*?count=0
 Crawl-delay: 1
 
 # 🔥 소셜 미디어 크롤러는 완전 허용 (공유 기능 완전 보존)
