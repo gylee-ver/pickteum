@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useLayoutEffect } from "react"
 import ContentCard from "@/components/content-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCategory } from "@/contexts/category-context"
@@ -10,6 +10,22 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
+
+interface Article {
+  id: string;
+  title: string;
+  category: {
+    name: string;
+    color: string;
+  };
+  thumbnail: string;
+  date: string;
+  publishedAt: string;
+}
+
+interface ContentFeedProps {
+  initialArticles?: Article[];
+}
 
 // 이미지 프리로딩 함수
 const preloadImages = (imageUrls: string[]) => {
@@ -24,11 +40,11 @@ const preloadImages = (imageUrls: string[]) => {
   })
 }
 
-export default function ContentFeed() {
+export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) {
   const { activeCategory } = useCategory()
-  const [content, setContent] = useState<any[]>([])
+  const [content, setContent] = useState<Article[]>(initialArticles)
   const [categories, setCategories] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialArticles.length === 0)
   const [error, setError] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
@@ -59,9 +75,15 @@ export default function ContentFeed() {
 
   // 글 데이터 로드 - categories 의존성 추가
   useEffect(() => {
+    // 🔥 초기 데이터가 있으면 첫 페이지 로드를 건너뜀 (SSR)
+    if (page === 1 && initialArticles.length > 0) {
+      setLoading(false)
+      return
+    }
+
     // categories가 로드된 후에만 loadArticles 실행
     if (categories.length > 0 || activeCategory === '전체') {
-    loadArticles()
+      loadArticles()
     }
   }, [activeCategory, page, categories])
 
@@ -173,12 +195,18 @@ export default function ContentFeed() {
   const scrollHandlerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    // 🔥 카테고리가 변경되면 확실하게 초기화
-    window.scrollTo(0, 0)
+    // 🔥 카테고리 변경 시 초기화 (SSR 데이터가 있는 홈은 제외)
+    if (initialArticles.length > 0 && activeCategory === '전체') {
+      // 홈('전체') 탭으로 돌아왔을 때, 초기 SSR 데이터로 복원
+      setContent(initialArticles)
+    } else {
+      // 다른 탭으로 이동 시 기존 로직대로 초기화
+      window.scrollTo(0, 0)
+      setContent([])
+    }
     setPage(1)
-    setContent([]) // 콘텐츠 완전 초기화
-    setError(false) // 에러 상태도 초기화
-    setHasMore(true) // hasMore 상태도 초기화
+    setError(false)
+    setHasMore(true)
   }, [activeCategory])
 
   useEffect(() => {

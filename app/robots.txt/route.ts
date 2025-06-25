@@ -20,9 +20,7 @@ Disallow: /404
 Disallow: /admin/
 Disallow: /api/
 Disallow: /debug-meta
-# 🔥 빈 페이지네이션 및 오류 페이지 차단 (정규식 개선)
-Disallow: /page/
-Disallow: /*?page=
+# 🔥 오류 페이지 차단
 Disallow: /*?error=
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
@@ -45,8 +43,6 @@ Disallow: /s/*?*
 Disallow: /404
 Disallow: /admin/
 Disallow: /api/
-# 🔥 빈 페이지네이션 차단 (정규식 개선)
-Disallow: /page/
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
 Disallow: /*?count=0
@@ -72,8 +68,6 @@ Disallow: /s/*?*
 Disallow: /404
 Disallow: /admin/
 Disallow: /api/
-# 🔥 빈 페이지네이션 차단 (정규식 개선)
-Disallow: /page/
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
 Disallow: /*?count=0
@@ -94,8 +88,6 @@ Disallow: /404
 Disallow: /admin/
 Disallow: /api/
 Disallow: /debug-meta
-# 🔥 빈 페이지네이션 차단 (정규식 개선)
-Disallow: /page/
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
 Disallow: /*?count=0
@@ -112,8 +104,6 @@ Disallow: /s/*?*
 Disallow: /404
 Disallow: /admin/
 Disallow: /api/
-# 🔥 빈 페이지네이션 차단 (정규식 개선)
-Disallow: /page/
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
 Disallow: /*?count=0
@@ -133,8 +123,6 @@ Disallow: /s/*?*
 Disallow: /404
 Disallow: /admin/
 Disallow: /api/
-# 🔥 빈 페이지네이션 차단 (정규식 개선)
-Disallow: /page/
 # 🔥 빈 카테고리(게시글 0개) 공통 차단
 Disallow: /*?empty=
 Disallow: /*?count=0

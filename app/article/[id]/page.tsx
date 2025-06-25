@@ -14,29 +14,38 @@ export const revalidate = 300 // 5분마다 재검증 (60초에서 증가)
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 아티클 메타데이터 v5.0 - 소셜 미디어 최적화')
+  console.log('🔥 SEO 최적화 아티클 메타데이터 v5.1 - slug 지원')
   
   try {
-    const { id } = await params
-    console.log('🔥 받은 ID:', id)
+    const { id: rawId } = await params
+    const id = decodeURIComponent(rawId)
+    console.log('🔥 받은 ID(디코딩):', id)
     
-    // UUID 검증 최적화
+    // UUID 검증
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    if (!isUUID) {
-      console.log('🔥 UUID 검증 실패, 기본 메타데이터 반환')
-      return getDefaultMetadata()
-    }
     
-    console.log('🔥 데이터베이스 조회 시작:', id)
+    console.log('🔥 데이터베이스 조회 시작:', id, isUUID ? '(UUID)' : '(slug)')
     
     // 🔥 타임아웃 증가로 안정성 향상 (3초 → 8초)
     const { data: article, error } = await Promise.race([
-      supabase
-        .from('articles')
-        .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
-        .eq('id', id)
-        .eq('status', 'published')
-        .single(),
+      isUUID
+        ? supabase
+            .from('articles')
+            .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
+            .eq('id', id)
+            .eq('status', 'published')
+            .single()
+        : supabase
+            .from('articles')
+            .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
+            .eq('slug', id)
+            .eq('status', 'published')
+            .order('published_at', { ascending: false })
+            .limit(1)
+            .then(result => ({ 
+              data: result.data?.[0] || null, 
+              error: result.error 
+            })),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
     ]) as any
     
@@ -108,7 +117,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 // 서버 컴포넌트 (기존과 동일하지만 에러 처리 강화)
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+  const { id: rawId } = await params
+  const id = decodeURIComponent(rawId)
   console.log('🔍 페이지 컴포넌트:', { id })
   
   if (!id || typeof id !== 'string') {
@@ -128,12 +138,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       .eq('status', 'published')
       .single()
   } else {
+    // 🔥 중복 slug 문제 해결: 가장 최근 발행된 글을 우선 선택
     query = supabase
       .from('articles') 
       .select('*, category:categories(*)')
-      .or(`slug.eq.${id},id.eq.${id}`)
+      .eq('slug', id)
       .eq('status', 'published')
-      .single()
+      .order('published_at', { ascending: false })
+      .limit(1)
   }
 
   // 🔥 개선된 에러 처리 - 재시도 로직 추가
@@ -146,7 +158,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 10000))
     ]) as any
     
-    article = result.data
+    // slug로 조회할 때는 배열로 반환되므로 첫 번째 요소 선택
+    if (isUUID) {
+      article = result.data
+    } else {
+      article = result.data?.[0] || null
+    }
     error = result.error
     
     // 🔥 첫 번째 시도 실패 시 재시도 (네트워크 불안정 대응)
@@ -155,7 +172,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       await new Promise(resolve => setTimeout(resolve, 1000)) // 1초 대기
       
       const retryResult = await query
-      article = retryResult.data
+      if (isUUID) {
+        article = retryResult.data
+      } else {
+        article = retryResult.data?.[0] || null
+      }
       error = retryResult.error
     }
   } catch (timeoutError) {
