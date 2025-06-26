@@ -51,6 +51,14 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   const loadingRef = useRef(false)
   const pageSize = 5
 
+  // 카테고리 변경을 감지하는 Ref
+  const isCategoryChanged = useRef(false);
+
+  useLayoutEffect(() => {
+    // activeCategory가 변경되면 플래그를 true로 설정
+    isCategoryChanged.current = true;
+  }, [activeCategory]);
+
   // 카테고리 데이터 로드
   useEffect(() => {
     const loadCategories = async () => {
@@ -73,19 +81,28 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
     loadCategories()
   }, [])
 
-  // 글 데이터 로드 - categories 의존성 추가
+  // 글 데이터 로드
   useEffect(() => {
-    // 🔥 초기 데이터가 있으면 첫 페이지 로드를 건너뜀 (SSR)
-    if (page === 1 && initialArticles.length > 0) {
-      setLoading(false)
-      return
+    const fetchArticles = async () => {
+      // 카테고리가 '전체'가 아니고, 카테고리 목록이 아직 로드되지 않았으면 대기
+      if (activeCategory !== '전체' && categories.length === 0) {
+        return;
+      }
+      
+      // SSR로 받은 초기 데이터가 있고, 첫 페이지이며, '전체' 카테고리일 때는 로드하지 않음
+      if (page === 1 && initialArticles.length > 0 && activeCategory === '전체' && !isCategoryChanged.current) {
+        setContent(initialArticles);
+        setLoading(false);
+        setHasMore(initialArticles.length === pageSize);
+        return;
+      }
+
+      await loadArticles();
+      isCategoryChanged.current = false; // 데이터 로드 후 플래그 리셋
     }
 
-    // categories가 로드된 후에만 loadArticles 실행
-    if (categories.length > 0 || activeCategory === '전체') {
-      loadArticles()
-    }
-  }, [activeCategory, page, categories])
+    fetchArticles();
+  }, [activeCategory, page, categories]);
 
   const loadArticles = async () => {
     if (loadingRef.current) return
@@ -94,7 +111,9 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
     loadingRef.current = true
     
     try {
-      // Supabase 쿼리 구성
+      const from = (page - 1) * pageSize;
+      const to = page * pageSize - 1;
+
       let query = supabase
         .from('articles')
         .select(`
@@ -103,21 +122,24 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
           thumbnail,
           published_at,
           created_at,
+          slug,
           category_id,
           categories!inner(name, color)
         `)
         .eq('status', 'published')
         .order('published_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+        .range(from, to);
       
       // 카테고리 필터링
       if (activeCategory !== '전체') {
+        // categories 상태가 업데이트 될 때까지 기다렸으므로 안전하게 find 사용 가능
         const categoryId = categories.find(cat => cat.name === activeCategory)?.id
         if (categoryId) {
           query = query.eq('category_id', categoryId)
         } else {
           logger.warn(`카테고리 "${activeCategory}"의 ID를 찾을 수 없습니다.`)
           setContent([])
+          setHasMore(false)
           setLoading(false)
           loadingRef.current = false
           return
@@ -138,7 +160,7 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
       const formattedData = data.map(article => {
         const imageUrl = getImageUrl(article.thumbnail)
         return {
-          id: article.id,
+          id: article.slug || article.id,
           title: article.title,
           category: {
             name: (article as any).categories?.name || '미분류',
@@ -158,7 +180,7 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
         preloadImages(imageUrls)
       }
       
-      if (page === 1) {
+      if (page === 1 || isCategoryChanged.current) {
         setContent(formattedData)
       } else {
         setContent(prev => {
@@ -188,25 +210,23 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
     filteredContent.slice(0, 5) : filteredContent
 
   const handleLoadMore = () => {
-    setPage(prev => prev + 1)
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1)
+    }
   }
 
   // 스크롤 이벤트 핸들러 참조 저장
   const scrollHandlerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    // 🔥 카테고리 변경 시 초기화 (SSR 데이터가 있는 홈은 제외)
-    if (initialArticles.length > 0 && activeCategory === '전체') {
-      // 홈('전체') 탭으로 돌아왔을 때, 초기 SSR 데이터로 복원
-      setContent(initialArticles)
-    } else {
-      // 다른 탭으로 이동 시 기존 로직대로 초기화
-      window.scrollTo(0, 0)
-      setContent([])
-    }
+    // activeCategory가 변경되면 상태를 초기화
+    // '전체' 탭으로 돌아왔을 때 initialArticles로 재설정하는 로직은
+    // 메인 useEffect 로직으로 통합.
+    setContent([]);
     setPage(1)
     setError(false)
     setHasMore(true)
+    window.scrollTo(0, 0)
   }, [activeCategory])
 
   useEffect(() => {
