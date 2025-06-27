@@ -10,6 +10,10 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getImageUrl } from "@/lib/utils"
 
+// 🔥 캐시 무효화 설정 - 메인 페이지는 항상 최신 데이터 표시
+export const revalidate = 0 // 캐시 비활성화
+export const dynamic = 'force-dynamic' // 항상 동적 렌더링
+
 export const metadata: Metadata = {
   alternates: {
     canonical: 'https://www.pickteum.com',
