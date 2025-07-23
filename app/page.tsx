@@ -9,6 +9,8 @@ import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getImageUrl } from "@/lib/utils"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 // 🔥 캐시 무효화 설정 - 메인 페이지는 항상 최신 데이터 표시
 export const revalidate = 0 // 캐시 비활성화
@@ -103,4 +105,31 @@ export default async function Home() {
       </div>
     </>
   )
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  
+  // 🔥 AdSense 호환성을 위한 응답 헤더 설정
+  const response = NextResponse.next()
+  
+  // 🔥 Google AdSense iframe 허용을 위한 CSP 설정
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.google.com https://*.doubleclick.net https://*.googlesyndication.com;"
+  )
+  
+  // 🔥 X-Frame-Options 헤더 제거
+  response.headers.delete('X-Frame-Options')
+  
+  // ... 기존 리다이렉트 로직 유지 ...
+  
+  return response
+}
+
+// 🔥 모든 페이지에 헤더 적용
+export const config = {
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ]
 }
