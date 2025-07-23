@@ -82,14 +82,26 @@ export async function middleware(request: NextRequest) {
       // 에러 발생 시 정상 처리 계속
     }
   }
+
+  // 🔥 AdSense 호환 보안 헤더 설정
+  const response = NextResponse.next()
   
-  return NextResponse.next()
+  // CSP frame-ancestors 정책: Google AdSense 도메인 허용
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.google.com https://*.googleads.com https://*.googlesyndication.com https://*.doubleclick.net https://*.gstatic.com;"
+  )
+  
+  // 기타 보안 헤더 유지
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+  
+  return response
 }
 
-// 🔥 미들웨어 적용 경로 설정
+// 🔥 미들웨어 적용 경로 설정 - 모든 페이지에 보안 헤더 적용
 export const config = {
   matcher: [
-    '/article/:path*',
-    '/s/:path*'
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
   ]
 } 
