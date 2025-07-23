@@ -193,10 +193,30 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       console.log('❌ 아티클 없음, 404 반환')
       notFound()
     } else {
-      // DB 연결 오류 등의 경우 - 임시 에러 페이지 대신 재시도 유도
-      console.error('🚨 데이터베이스 오류:', error)
-      // 임시적으로 기본 메타데이터로 처리하거나 에러 페이지로 이동
-      notFound() // 현재는 404로 처리하지만, 향후 500 에러 페이지로 개선 가능
+      // DB 연결 오류 등의 경우 - fallback 콘텐츠 제공으로 AdSense 정책 준수
+      console.error('🚨 데이터베이스 오류, fallback 콘텐츠 제공:', error)
+      
+      // 기본 fallback 아티클 데이터 생성
+      const fallbackArticle = {
+        id: id,
+        title: '픽틈 - 콘텐츠 로딩 중',
+        content: '<p>콘텐츠를 불러오는 중입니다. 잠시만 기다려주세요.</p><p>페이지를 새로고침하시거나 잠시 후 다시 시도해주세요.</p>',
+        seo_description: '픽틈에서 제공하는 뉴스 콘텐츠입니다.',
+        thumbnail: '/pickteum_og.png',
+        author: '픽틈',
+        category: { id: '1', name: '뉴스', color: '#333' },
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        views: 0,
+        status: 'published'
+      }
+      
+      return (
+        <>
+          <ArticleSchema article={fallbackArticle} />
+          <ArticleClient articleId={id} initialArticle={fallbackArticle} />
+        </>
+      )
     }
   }
 

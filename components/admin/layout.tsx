@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import Head from "next/head"
 import { usePathname, useRouter } from "next/navigation"
 import {
   BarChart3,
@@ -139,7 +140,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ]
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div className="flex min-h-screen bg-gray-50">
       {/* 모바일 사이드바 오버레이 */}
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
@@ -324,5 +329,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </footer>
       </div>
     </div>
+    </>
   )
 }

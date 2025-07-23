@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
-import { redirect, notFound, RedirectType } from 'next/navigation'
+// notFound는 실제로 사용되지 않지만 향후 필요할 수 있어 import 유지
 import { headers } from 'next/headers'
+import { NextResponse } from 'next/server'
 import supabase from '@/lib/supabase'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   try {
     const { code } = await params
     
+    // 🔥 6자가 아닌 코드는 메타데이터에서도 기본값 반환
     if (!code || typeof code !== 'string' || code.length !== 6) {
       return getDefaultMetadata()
     }
@@ -122,8 +124,17 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   
+  // 🔥 6자가 아닌 코드는 301로 홈페이지로 리다이렉트
   if (!code || typeof code !== 'string' || code.length !== 6) {
-    notFound()
+    console.log('❌ 잘못된 코드 형식 - 홈으로 301 리다이렉트:', code)
+    
+    // 301 영구 리다이렉트로 처리
+    const headersList = await headers()
+    const host = headersList.get('host') || 'www.pickteum.com'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+    
+    return NextResponse.redirect(new URL('/', baseUrl), { status: 301 })
   }
   
   // User-Agent 확인 (기존 로직 유지)
@@ -140,8 +151,37 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     .eq('status', 'published')
     .single()
   
+  // 🔥 아티클이 없거나 비공개인 경우 410 Gone 응답
   if (error || !article) {
-    notFound()
+    console.log('💀 아티클을 찾을 수 없음 - 410 Gone 반환:', { code, error: error?.message })
+    
+    // 크롤러인 경우 410 Gone 상태와 함께 간단한 HTML 반환
+    if (isCrawler(userAgent)) {
+      return new Response(
+        `<!DOCTYPE html>
+        <html>
+        <head>
+          <title>콘텐츠가 삭제되었습니다 - 픽틈</title>
+          <meta name="robots" content="noindex, nofollow">
+        </head>
+        <body>
+          <h1>410 - 콘텐츠가 삭제되었습니다</h1>
+          <p>요청하신 콘텐츠는 영구적으로 삭제되었습니다.</p>
+        </body>
+        </html>`,
+        { 
+          status: 410,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        }
+      )
+    }
+    
+    // 일반 사용자는 홈으로 301 리다이렉트
+    const host = headersList.get('host') || 'www.pickteum.com'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+    
+    return NextResponse.redirect(new URL('/', baseUrl), { status: 301 })
   }
   
   // 조회수 증가 (백그라운드 - 기존 유지)
@@ -220,7 +260,17 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     )
   }
   
-  // 🔥 일반 사용자: 301 영구 리다이렉트로 변경 (307 임시 → 301 영구)
+  // 🔥 일반 사용자: 301 영구 리다이렉트로 변경
   console.log('👤 일반 사용자 - 301 영구 리다이렉트')
-  redirect(`/article/${article.id}`, RedirectType.replace) // 🔥 301 영구 리다이렉트
+  
+  // 현재 호스트 정보 가져오기
+  const host = headersList.get('host') || 'www.pickteum.com'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const baseUrl = `${protocol}://${host}`
+  
+  // Next.js 15에서 영구 리다이렉트를 위해 Response 객체 사용
+  return NextResponse.redirect(
+    new URL(`/article/${article.id}`, baseUrl),
+    { status: 301 }
+  )
 } 

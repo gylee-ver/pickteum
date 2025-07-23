@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import Head from "next/head"
 import { Eye, EyeOff, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,7 +85,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
       <div
         className={cn(
           "w-full max-w-[400px] transition-all duration-500 transform",
@@ -222,5 +227,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </>
   )
 }
