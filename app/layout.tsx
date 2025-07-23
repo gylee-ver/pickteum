@@ -109,6 +109,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         
         {/* 🔥 모바일 최적화 메타태그 (CLS 방지) */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
@@ -119,6 +120,13 @@ export default function RootLayout({
         
         {/* 🔧 성능 최적화 메타태그 */}
         <meta name="theme-color" content="#F2FF66" />
+
+        {/* 🔥 Google AdSense - 광고 승인 및 수익화 */}
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         
         {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화) */}
         <Script
