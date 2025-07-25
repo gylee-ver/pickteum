@@ -1,5 +1,4 @@
-import { notFound } from 'next/navigation'
-import { NextResponse } from 'next/server'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import supabase from '@/lib/supabase'
 
@@ -20,12 +19,7 @@ export default async function ShortUrlPage({ params }: { params: Promise<{ slug:
     }
     
     // 301 영구 리다이렉트로 원본 URL로 이동
-    const headersList = await headers()
-    const host = headersList.get('host') || 'www.pickteum.com'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}`
-    
-    return NextResponse.redirect(new URL(`/article/${article.id}`, baseUrl), { status: 301 })
+    permanentRedirect(`/article/${article.id}`)
     
   } catch (error) {
     console.error('단축 URL 처리 오류:', error)

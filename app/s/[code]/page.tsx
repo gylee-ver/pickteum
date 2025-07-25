@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 // notFound는 실제로 사용되지 않지만 향후 필요할 수 있어 import 유지
 import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { permanentRedirect } from 'next/navigation'
 import supabase from '@/lib/supabase'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 
@@ -129,12 +129,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     console.log('❌ 잘못된 코드 형식 - 홈으로 301 리다이렉트:', code)
     
     // 301 영구 리다이렉트로 처리
-    const headersList = await headers()
-    const host = headersList.get('host') || 'www.pickteum.com'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}`
-    
-    return NextResponse.redirect(new URL('/', baseUrl), { status: 301 })
+    permanentRedirect('/')
   }
   
   // User-Agent 확인 (기존 로직 유지)
@@ -177,11 +172,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
     }
     
     // 일반 사용자는 홈으로 301 리다이렉트
-    const host = headersList.get('host') || 'www.pickteum.com'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}`
-    
-    return NextResponse.redirect(new URL('/', baseUrl), { status: 301 })
+    permanentRedirect('/')
   }
   
   // 조회수 증가 (백그라운드 - 기존 유지)
@@ -263,14 +254,6 @@ export default async function ShortCodePage({ params }: { params: Promise<{ code
   // 🔥 일반 사용자: 301 영구 리다이렉트로 변경
   console.log('👤 일반 사용자 - 301 영구 리다이렉트')
   
-  // 현재 호스트 정보 가져오기
-  const host = headersList.get('host') || 'www.pickteum.com'
-  const protocol = host.includes('localhost') ? 'http' : 'https'
-  const baseUrl = `${protocol}://${host}`
-  
-  // Next.js 15에서 영구 리다이렉트를 위해 Response 객체 사용
-  return NextResponse.redirect(
-    new URL(`/article/${article.id}`, baseUrl),
-    { status: 301 }
-  )
+  // Next.js 15에서 영구 리다이렉트를 위해 permanentRedirect 사용
+  permanentRedirect(`/article/${article.id}`)
 } 
