@@ -9,6 +9,7 @@ import supabase from "@/lib/supabase"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getImageUrl } from "@/lib/utils"
+import StaticFeed from "@/components/static-feed"
 
 // 🔥 캐시 무효화 설정 - 메인 페이지는 항상 최신 데이터 표시
 export const revalidate = 0 // 캐시 비활성화
@@ -95,6 +96,9 @@ export default async function Home() {
           <CategoryProvider>
             <main className="flex-grow px-4">
               <CategoryFilter />
+              {/* 정적 SSR 피드 – JS 비활성 환경 대응 */}
+              <StaticFeed articles={formattedArticles} />
+              {/* 기존 동적 피드 */}
               <ContentFeed initialArticles={formattedArticles} />
             </main>
           </CategoryProvider>

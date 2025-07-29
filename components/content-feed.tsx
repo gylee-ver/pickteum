@@ -51,6 +51,14 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   const loadingRef = useRef(false)
   const pageSize = 5
 
+  // JS 로드 후 정적(SSR) 피드 숨김
+  useEffect(() => {
+    const staticEl = document.getElementById('static-feed')
+    if (staticEl) {
+      staticEl.style.display = 'none'
+    }
+  }, [])
+
   // 카테고리 변경을 감지하는 Ref
   const isCategoryChanged = useRef(false);
 
