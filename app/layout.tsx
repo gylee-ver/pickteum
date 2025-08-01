@@ -127,12 +127,12 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         
-        {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화) */}
+        {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화 - lazyOnload) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-8R9N5SG6WM"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -187,17 +187,46 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* Hotjar Tracking Code (성능 최적화) */}
-        <Script id="hotjar" strategy="lazyOnload">
+        {/* Hotjar Tracking Code (사용자 상호작용 기반 로딩) */}
+        <Script id="hotjar-on-scroll" strategy="lazyOnload">
           {`
-            (function(h,o,t,j,a,r){
-              h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-              h._hjSettings={hjid:6415192,hjsv:6};
-              a=o.getElementsByTagName('head')[0];
-              r=o.createElement('script');r.async=1;
-              r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
-              a.appendChild(r);
-            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            // 🔥 성능 최적화: 사용자가 스크롤 300px 이상 하거나 15초 후에 Hotjar 로드
+            let hotjarLoaded = false;
+            
+            function loadHotjar() {
+              if (hotjarLoaded) return;
+              hotjarLoaded = true;
+              
+              // Hotjar 스크립트 동적 로드
+              (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:6415192,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+              })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+            
+            // 스크롤 300px 이상 시 로드
+            let scrollThreshold = 300;
+            function handleScroll() {
+              if (window.scrollY >= scrollThreshold) {
+                loadHotjar();
+                window.removeEventListener('scroll', handleScroll);
+              }
+            }
+            
+            // 이벤트 리스너 등록 (페이지 로드 후)
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            
+            // 15초 후 자동 로드 (백업)
+            setTimeout(loadHotjar, 15000);
+            
+            // 사용자 상호작용 시 즉시 로드
+            ['click', 'touchstart', 'keydown'].forEach(event => {
+              document.addEventListener(event, loadHotjar, { once: true, passive: true });
+            });
           `}
         </Script>
         
