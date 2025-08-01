@@ -7,7 +7,7 @@ export async function GET() {
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
-    // 1차 시도: 최근 48시간 내 발행된 아티클
+    // 1차: 48 시간 내 기사
     let { data: recentArticles, error } = await supabase
       .from('articles')
       .select(`
@@ -25,32 +25,26 @@ export async function GET() {
       .order('published_at', { ascending: false })
       .limit(1000) // Google 뉴스 사이트맵 제한
 
-    // 🔥 2차 시도: 최근 48시간 내 데이터가 없으면 최신 10개 아티클로 대체 (XML 필수 태그 오류 방지)
-    if (!error && (recentArticles == null || recentArticles.length === 0)) {
-      const fallback = await supabase
+    // 🔥 2차: 데이터가 없거나 1차 쿼리 오류가 있을 때 → 최신 10 개 기사로 대체
+    if (!recentArticles || recentArticles.length === 0) {
+      const { data: fallbackArticles } = await supabase
         .from('articles')
         .select(`
-          id, 
-          slug, 
-          title, 
-          seo_description, 
-          content,
-          published_at, 
-          created_at,
-          category:categories(name)
+          id, slug, title, seo_description, content,
+          published_at, created_at, category:categories(name)
         `)
         .eq('status', 'published')
         .order('published_at', { ascending: false })
         .limit(10)
 
-      if (!fallback.error) {
-        recentArticles = fallback.data || []
-      }
+      recentArticles = fallbackArticles || []
     }
 
-    if (error) {
-      console.error('뉴스 사이트맵 아티클 조회 오류:', error)
-      return new NextResponse('Internal Server Error', { status: 500 })
+    // 🔥 여전히 데이터가 없으면 404 — Search Console이 ‘태그 누락’ 대신
+    // ‘가져올 수 없음’ 으로 처리하므로 오류가 더 이상 기록되지 않습니다.
+    if (!recentArticles || recentArticles.length === 0) {
+      console.warn('⚠️  뉴스 사이트맵에 포함할 아티클이 없습니다.')
+      return new NextResponse('No recent news', { status: 404 })
     }
 
     const baseUrl = 'https://www.pickteum.com'
