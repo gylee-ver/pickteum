@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import supabase from "@/lib/supabase"
+
 import { logger } from "@/lib/utils"
 
 
@@ -38,37 +38,18 @@ export default function Header() {
 
     setIsSearching(true)
     try {
-      // Supabase에서 제목으로 검색 (대소문자 구분 없이)
-      const { data, error } = await supabase
-        .from('articles')
-        .select(`
-          id,
-          title,
-          slug,
-          thumbnail,
-          category:categories(name, color)
-        `)
-        .eq('status', 'published')
-        .ilike('title', `%${query}%`)
-        .limit(5)
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (error) {
-        logger.error('검색 오류:', error)
-        setSearchResults([])
-      } else {
-        // category가 배열일 수 있으므로 안전하게 변환
-        const formattedData = (data || []).map(article => {
-          const categoryData = Array.isArray(article.category) 
-            ? article.category[0] 
-            : article.category;
-          
-          return {
-            ...article,
-            category: categoryData || { name: '미분류', color: '#cccccc' }
-          };
-        });
-        setSearchResults(formattedData)
+      if (!response.ok) {
+        throw new Error(`검색 API 오류: ${response.status}`)
       }
+
+      const result = await response.json()
+      setSearchResults(result.articles || [])
     } catch (error) {
       logger.error('검색 중 예외 발생:', error)
       setSearchResults([])

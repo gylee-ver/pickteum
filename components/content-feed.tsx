@@ -5,7 +5,7 @@ import ContentCard from "@/components/content-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCategory } from "@/contexts/category-context"
 import { Button } from "@/components/ui/button"
-import supabase from "@/lib/supabase"
+
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { logger, getImageUrl } from "@/lib/utils"
@@ -71,16 +71,18 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
+        const response = await fetch('/api/categories', {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
         
-        if (error) {
-          logger.error('카테고리 로드 오류:', error)
-          return
+        if (!response.ok) {
+          throw new Error(`카테고리 API 오류: ${response.status}`)
         }
         
-        setCategories(data || [])
+        const result = await response.json()
+        setCategories(result.categories || [])
       } catch (err) {
         logger.error('카테고리 로드 중 예외:', err)
       }

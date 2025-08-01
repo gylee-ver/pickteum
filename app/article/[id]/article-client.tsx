@@ -8,7 +8,7 @@ import { ArrowLeft, Share2, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ContentCard from "@/components/content-card"
 import Footer from "@/components/footer"
-import supabase from "@/lib/supabase"
+
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -45,10 +45,16 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
       // 🔥 조회수 증가 (비동기)
       const updateViews = async () => {
         try {
-          await supabase
-            .from('articles')
-            .update({ views: (initialArticle.views || 0) + 1 })
-            .eq('id', articleId)
+          const response = await fetch(`/api/articles/${articleId}/views`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          if (!response.ok) {
+            throw new Error(`조회수 API 오류: ${response.status}`)
+          }
         } catch (error) {
           console.error('조회수 업데이트 오류:', error)
         }
@@ -66,36 +72,18 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
     if (!categoryId) return;
     
     try {
-      const { data: relatedData, error } = await supabase
-        .from('articles')
-        .select(`
-          *,
-          category:categories(
-            id,
-            name,
-            color
-          )
-        `)
-        .eq('category_id', categoryId)
-        .eq('status', 'published')
-        .neq('id', articleId)
-        .order('published_at', { ascending: false })
-        .limit(3)
+      const response = await fetch(`/api/articles/${articleId}/related?categoryId=${categoryId}&limit=3`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
       
-      if (!error && relatedData) {
-        setRelatedArticles(relatedData.map(article => ({
-          id: article.id,
-          title: article.title,
-          category: {
-            name: article.category?.name || '미분류',
-            color: article.category?.color || '#cccccc'
-          },
-          thumbnail: article.thumbnail || '/placeholder.svg',
-          date: article.published_at ? 
-            format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-            format(new Date(article.created_at), 'yyyy.MM.dd', { locale: ko })
-        })))
+      if (!response.ok) {
+        throw new Error(`관련 아티클 API 오류: ${response.status}`)
       }
+      
+      const result = await response.json()
+      setRelatedArticles(result.articles || [])
     } catch (error) {
       console.error('관련 아티클 로드 오류:', error)
     }
@@ -103,40 +91,25 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
 
   const loadPopularArticles = async () => {
     try {
-      const { data: popularData, error } = await supabase
-        .from('articles')
-        .select(`
-          id,
-          title,
-          views,
-          category:categories(
-            name,
-            color
-          )
-        `)
-        .eq('status', 'published')
-        .neq('id', articleId)
-        .order('views', { ascending: false })
-        .limit(3)
+      const response = await fetch('/api/articles/popular?limit=3', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
       
-      if (!error && popularData) {
-        setPopularArticles(popularData.map(article => {
-          // category가 배열일 수 있으므로 안전하게 접근
-          const categoryData = Array.isArray(article.category) 
-            ? article.category[0] 
-            : article.category;
-            
-          return {
-            id: article.id,
-            title: article.title,
-            views: article.views || 0,
-            category: {
-              name: categoryData?.name || '미분류',
-              color: categoryData?.color || '#cccccc'
-            }
-          };
-        }))
+      if (!response.ok) {
+        throw new Error(`인기 아티클 API 오류: ${response.status}`)
       }
+      
+      const result = await response.json()
+      
+      // API 응답에서 views가 없는 경우를 대비해 변환
+      const articlesWithViews = result.articles?.map((article: any) => ({
+        ...article,
+        views: article.views || 0
+      })) || []
+      
+      setPopularArticles(articlesWithViews)
     } catch (error) {
       console.error('인기 아티클 로드 오류:', error)
     }
