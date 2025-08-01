@@ -12,8 +12,8 @@ import { getImageUrl } from "@/lib/utils"
 import StaticFeed from "@/components/static-feed"
 import { headers } from 'next/headers'
 
-// 🔥 캐시 무효화 설정 - 메인 페이지는 항상 최신 데이터 표시
-export const revalidate = 0 // 캐시 비활성화
+// 🔥 ISR 설정 - 5분마다 페이지 재검증 (성능 최적화)
+export const revalidate = 300 // 5분마다 재검증
 
 // 🔥 애드센스 호환성: 봇인 경우 정적 렌더링 허용, 일반 사용자는 동적 렌더링
 export const dynamic = 'auto' // 자동 렌더링 선택

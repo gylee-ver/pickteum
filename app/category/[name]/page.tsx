@@ -9,6 +9,9 @@ import { ko } from "date-fns/locale"
 import { generateCategoryCollectionSchema, generateBreadcrumbSchema, generateCategoryFAQSchema } from '@/lib/structured-data'
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
+// 🔥 ISR 설정 - 5분마다 페이지 재검증 (성능 최적화)
+export const revalidate = 300 // 5분마다 재검증
+
 // 🔥 영어 카테고리명을 한글로 매핑 (404 에러 해결)
 function getCategoryName(rawName: string): string {
   const categoryMapping: { [key: string]: string } = {

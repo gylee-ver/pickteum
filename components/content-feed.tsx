@@ -119,68 +119,28 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
     loadingRef.current = true
     
     try {
-      const from = (page - 1) * pageSize;
-      const to = page * pageSize - 1;
+      // 🔥 새로운 API 라우트 사용 - 서버에서 캐시된 데이터 가져오기
+      const response = await fetch(`/api/articles?page=${page}&limit=${pageSize}&category=${encodeURIComponent(activeCategory)}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      let query = supabase
-        .from('articles')
-        .select(`
-          id,
-          title,
-          thumbnail,
-          published_at,
-          created_at,
-          slug,
-          category_id,
-          categories!inner(name, color)
-        `)
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .range(from, to);
-      
-      // 카테고리 필터링
-      if (activeCategory !== '전체') {
-        // categories 상태가 업데이트 될 때까지 기다렸으므로 안전하게 find 사용 가능
-        const categoryId = categories.find(cat => cat.name === activeCategory)?.id
-        if (categoryId) {
-          query = query.eq('category_id', categoryId)
-        } else {
-          logger.warn(`카테고리 "${activeCategory}"의 ID를 찾을 수 없습니다.`)
-          setContent([])
-          setHasMore(false)
-          setLoading(false)
-          loadingRef.current = false
-          return
-        }
+      if (!response.ok) {
+        throw new Error(`API 오류: ${response.status}`)
       }
+
+      const result = await response.json()
       
-      const { data, error } = await query
-      
-      if (error) {
-        logger.error('아티클 로드 오류:', error)
+      if (result.error) {
+        logger.error('API 응답 오류:', result.error)
         setError(true)
         return
       }
       
-      logger.log('로드된 아티클:', data)
+      logger.log('API로부터 로드된 아티클:', result.articles)
       
-      // 아티클 데이터 변환
-      const formattedData = data.map(article => {
-        const imageUrl = getImageUrl(article.thumbnail)
-        return {
-          id: article.slug || article.id,
-          title: article.title,
-          category: {
-            name: (article as any).categories?.name || '미분류',
-            color: (article as any).categories?.color || '#cccccc'
-          },
-          thumbnail: imageUrl,
-          date: article.published_at ? 
-            format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-            format(new Date(), 'yyyy.MM.dd', { locale: ko }),
-          publishedAt: article.published_at
-        }
-      })
+      const formattedData: Article[] = result.articles
       
       // 첫 페이지 이미지들 프리로딩
       if (page === 1) {
@@ -199,7 +159,7 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
       }
       
       // 더 불러올 데이터가 있는지 확인
-      setHasMore(data.length === pageSize)
+      setHasMore(result.hasMore)
       
     } catch (err) {
       logger.error('아티클 로드 중 예외:', err)

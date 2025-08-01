@@ -8,9 +8,16 @@ import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
 // 강제 동적 렌더링
 // export const dynamic = 'force-dynamic'
 
-// 🔥 수정된 설정 - 안정성 향상
-export const revalidate = 300 // 5분마다 재검증 (60초에서 증가)
-// 또는 완전히 제거
+// 🔥 ISR 설정 - 5분마다 재검증, 기사별 태그 지원
+export const revalidate = 300 // 5분마다 재검증
+
+// 🔥 기사별 revalidateTag를 위한 태그 생성 함수
+function getArticleTags(articleId: string) {
+  return [
+    `article:${articleId}`,
+    'articles:all'
+  ]
+}
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -125,6 +132,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     console.log('❌ 잘못된 ID 형식')
     notFound()
   }
+
+  // 🔥 기사별 캐시 태그 설정 - 개별 기사 무효화 지원
+  const tags = getArticleTags(id)
+  console.log('🏷️ 기사 캐시 태그:', tags)
 
   // UUID 검증 로직 추가
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
