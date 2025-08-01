@@ -57,7 +57,8 @@ export async function GET() {
 
     const newsSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${recentArticles?.map(article => {
   // 키워드 추출 (제목과 카테고리에서)
   const categoryData = Array.isArray(article.category) 
@@ -83,9 +84,7 @@ ${recentArticles?.map(article => {
       <news:title><![CDATA[${article.title}]]></news:title>
       ${keywords ? `<news:keywords><![CDATA[${keywords}]]></news:keywords>` : ''}
     </news:news>
-    <lastmod>${article.published_at || article.created_at}</lastmod>
-    <changefreq>never</changefreq>
-    <priority>0.9</priority>
+
   </url>`
 }).join('\n') || ''}
 </urlset>`
