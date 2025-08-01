@@ -8,6 +8,7 @@ interface SeoImageProps extends ImageProps {
 export default function SeoImage({ 
   sizes = "(max-width: 768px) 80vw, 160px", 
   src, 
+  alt,
   ...props 
 }: SeoImageProps) {
   const blurDataURL = generateBlurDataURL(typeof src === 'string' ? src : null)
@@ -15,6 +16,7 @@ export default function SeoImage({
   return (
     <Image
       src={src}
+      alt={alt || ""}
       sizes={sizes}
       placeholder="blur"
       blurDataURL={blurDataURL}

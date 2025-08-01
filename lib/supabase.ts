@@ -32,7 +32,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // 안전한 버킷 확인/사용 함수 (인증 필요 없음)
-export async function useStorageBucket(bucketName: string) {
+export async function getStorageBucket(bucketName: string) {
   try {
     // 버킷이 존재하는지 확인만 하고 오류가 나면 무시
     try {

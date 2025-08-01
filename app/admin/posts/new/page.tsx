@@ -19,7 +19,7 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Bold, FolderOpen, Globe, Italic, Search } from "lucide-react"
-import { useStorageBucket } from "@/lib/supabase"
+import { getStorageBucket } from "@/lib/supabase"
 import supabase from "@/lib/supabase"
 import { ImageAltTipsModal } from "@/components/admin/ImageAltTipsModal"
 import { HelpCircle } from "lucide-react"
@@ -329,7 +329,7 @@ export default function NewPostPage() {
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
       const filePath = `images/${fileName}`
 
-      const bucket = await useStorageBucket('article-thumbnails')
+      const bucket = await getStorageBucket('article-thumbnails')
       const { data: uploadData, error: uploadError } = await bucket.upload(filePath, file)
 
       if (uploadError) {

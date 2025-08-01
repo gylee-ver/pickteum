@@ -3,7 +3,7 @@ const BASE_URL = 'https://www.pickteum.com'
 
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: false,

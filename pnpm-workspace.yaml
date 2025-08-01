@@ -1,4 +1,3 @@
 ignoredBuiltDependencies:
   - aws-sdk
-  - sharp
   - unrs-resolver
