@@ -42,9 +42,18 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
 
   useEffect(() => {
     if (initialArticle) {
-      // 🔥 조회수 증가 (비동기)
+      // 🔥 조회수 증가 (비동기) - 사용자 경험에 영향 없는 백그라운드 처리
       const updateViews = async () => {
         try {
+          // 입력 검증: articleId가 올바른 UUID 형식인지 확인
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          if (!articleId || !uuidRegex.test(articleId)) {
+            console.warn('조회수 업데이트 건너뜀: 잘못된 articleId 형식', articleId)
+            return
+          }
+
+          console.log('조회수 업데이트 시도, articleId:', articleId)
+          
           const response = await fetch(`/api/articles/${articleId}/views`, {
             method: 'POST',
             headers: {
@@ -52,11 +61,25 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
             },
           })
           
-          if (!response.ok) {
-            throw new Error(`조회수 API 오류: ${response.status}`)
+          if (response.ok) {
+            const result = await response.json()
+            console.log('✅ 조회수 업데이트 성공:', result)
+          } else {
+            // 조용히 로깅만 하고 사용자에게는 영향 없음
+            try {
+              const errorData = await response.json()
+              console.warn('📊 조회수 업데이트 실패 (백그라운드):', {
+                status: response.status,
+                error: errorData
+              })
+            } catch {
+              console.warn('📊 조회수 업데이트 실패 (백그라운드):', response.status)
+            }
           }
+          
         } catch (error) {
-          console.error('조회수 업데이트 오류:', error)
+          // 네트워크 오류 등도 조용히 처리
+          console.warn('📊 조회수 업데이트 실패 (네트워크):', error instanceof Error ? error.message : 'Unknown error')
         }
       }
       updateViews()

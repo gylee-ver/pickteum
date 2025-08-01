@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getEnvironmentHeaders, applyHeaders } from '@/lib/headers'
 
 // 🔥 SEO 최적화: 게시글 삭제/비공개 시 301 리다이렉트 처리
 export async function middleware(request: NextRequest) {
@@ -97,24 +98,30 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 🔥 AdSense 호환 보안 헤더 설정
+  // 🔥 체계화된 헤더 설정 적용
   const response = NextResponse.next()
   
-  // CSP frame-ancestors 정책: Google AdSense 도메인 허용
-  response.headers.set(
-    'Content-Security-Policy',
-    "frame-ancestors 'self' https://*.google.com https://*.googleads.com https://*.googlesyndication.com https://*.doubleclick.net https://*.gstatic.com;"
-  )
+  // 환경별 헤더 설정 적용 (AdSense 호환성 포함)
+  const headers = getEnvironmentHeaders()
+  applyHeaders(response, headers)
   
-  // iframe 호환을 위한 추가 헤더 조정
-  response.headers.set('X-Frame-Options', 'ALLOWALL')
-  response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none')
-  response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
-  response.headers.set('Origin-Agent-Cluster', '?0')
+  // 추가 성능 최적화 헤더
+  if (pathname.startsWith('/api/')) {
+    // API 엔드포인트용 캐시 헤더
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+    response.headers.set('Vary', 'Accept-Encoding, Accept')
+  } else if (pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$/)) {
+    // 정적 리소스용 장기 캐시
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+    response.headers.set('Vary', 'Accept-Encoding')
+  } else {
+    // 일반 페이지용 캐시 (ISR 호환)
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    response.headers.set('Vary', 'Accept-Encoding, Accept')
+  }
   
-  // 기타 보안 헤더 유지
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+  // SEO 최적화 헤더
+  response.headers.set('X-Robots-Tag', 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1')
   
   return response
 }

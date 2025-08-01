@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "verify-headers": "node scripts/verify-headers.js",
+    "verify-headers:local": "DOMAIN=localhost:3000 PROTOCOL=http node scripts/verify-headers.js",
+    "check-headers": "npm run verify-headers"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
