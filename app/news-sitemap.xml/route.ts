@@ -7,7 +7,8 @@ export async function GET() {
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
-    const { data: recentArticles, error } = await supabase
+    // 1차 시도: 최근 48시간 내 발행된 아티클
+    let { data: recentArticles, error } = await supabase
       .from('articles')
       .select(`
         id, 
@@ -24,6 +25,29 @@ export async function GET() {
       .order('published_at', { ascending: false })
       .limit(1000) // Google 뉴스 사이트맵 제한
 
+    // 🔥 2차 시도: 최근 48시간 내 데이터가 없으면 최신 10개 아티클로 대체 (XML 필수 태그 오류 방지)
+    if (!error && (recentArticles == null || recentArticles.length === 0)) {
+      const fallback = await supabase
+        .from('articles')
+        .select(`
+          id, 
+          slug, 
+          title, 
+          seo_description, 
+          content,
+          published_at, 
+          created_at,
+          category:categories(name)
+        `)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(10)
+
+      if (!fallback.error) {
+        recentArticles = fallback.data || []
+      }
+    }
+
     if (error) {
       console.error('뉴스 사이트맵 아티클 조회 오류:', error)
       return new NextResponse('Internal Server Error', { status: 500 })
@@ -32,6 +56,11 @@ export async function GET() {
     const baseUrl = 'https://www.pickteum.com'
 
     // 🔥 Google News 최적화된 XML 생성
+    // 🔥 최종 데이터가 없으면 404 반환 (Search Console 오류 예방)
+    if (!recentArticles || recentArticles.length === 0) {
+      return new NextResponse('No recent news', { status: 404 })
+    }
+
     const newsSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
