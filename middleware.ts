@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getEnvironmentHeaders, applyHeaders } from '@/lib/headers'
 
 // 🔥 SEO 최적화: 게시글 삭제/비공개 시 301 리다이렉트 처리
 export async function middleware(request: NextRequest) {
@@ -98,14 +97,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 🔥 체계화된 헤더 설정 적용
+  // 🔥 헤더 설정 적용 (Edge Runtime 호환)
   const response = NextResponse.next()
   
-  // 환경별 헤더 설정 적용 (AdSense 호환성 포함)
-  const headers = getEnvironmentHeaders()
-  applyHeaders(response, headers)
+  // 🔥 AdSense 호환 보안 헤더 (간소화)
+  response.headers.set('X-Frame-Options', 'ALLOWALL')
+  response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none')
+  response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
+  response.headers.set('Origin-Agent-Cluster', '?0')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
   
-  // 추가 성능 최적화 헤더
+  // 🔥 캐시 및 성능 헤더
   if (pathname.startsWith('/api/')) {
     // API 엔드포인트용 캐시 헤더
     response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')

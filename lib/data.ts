@@ -53,7 +53,7 @@ export interface Category {
   id: string
   name: string
   color: string
-  order_index?: number
+  created_at?: string
 }
 
 /**
@@ -193,11 +193,19 @@ export async function getCategories(): Promise<Category[]> {
   const { data: categories, error } = await supabaseServer
     .from('categories')
     .select('*')
-    .order('order_index', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
     console.error('getCategories 오류:', error)
-    return []
+    // 데이터베이스 오류 시 기본 카테고리 반환
+    return [
+      { id: '1', name: '건강', color: '#4CAF50' },
+      { id: '2', name: '스포츠', color: '#2196F3' },
+      { id: '3', name: '정치/시사', color: '#9C27B0' },
+      { id: '4', name: '경제', color: '#FF9800' },
+      { id: '5', name: '라이프', color: '#FF5722' },
+      { id: '6', name: '테크', color: '#607D8B' }
+    ]
   }
 
   return categories || []

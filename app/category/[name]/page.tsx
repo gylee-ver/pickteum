@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import supabase from "@/lib/supabase"
+import { getArticles, getCategories } from "@/lib/data"
 import Header from "@/components/header"
 import ContentCard from "@/components/content-card"
 import Footer from "@/components/footer"
@@ -11,6 +11,39 @@ import PickteumTracker from '@/components/analytics/pickteum-tracker'
 
 // 🔥 ISR 설정 - 5분마다 페이지 재검증 (성능 최적화)
 export const revalidate = 300 // 5분마다 재검증
+
+// 🔥 정적 페이지 생성을 위한 경로 미리 생성
+export async function generateStaticParams() {
+  try {
+    const categories = await getCategories()
+    const staticCategories = [
+      '건강', '스포츠', '정치/시사', '경제', '라이프', '테크'
+    ]
+    
+    // 데이터베이스의 카테고리와 하드코딩된 카테고리를 합쳐서 중복 제거
+    const allCategories = [
+      ...staticCategories,
+      ...categories.map(cat => cat.name)
+    ]
+    
+    const uniqueCategories = [...new Set(allCategories)]
+    
+    return uniqueCategories.map((name) => ({
+      name: encodeURIComponent(name),
+    }))
+  } catch (error) {
+    console.error('generateStaticParams 오류:', error)
+    // 기본 카테고리라도 반환
+    return [
+      { name: encodeURIComponent('건강') },
+      { name: encodeURIComponent('스포츠') },
+      { name: encodeURIComponent('정치/시사') },
+      { name: encodeURIComponent('경제') },
+      { name: encodeURIComponent('라이프') },
+      { name: encodeURIComponent('테크') }
+    ]
+  }
+}
 
 // 🔥 영어 카테고리명을 한글로 매핑 (404 에러 해결)
 function getCategoryName(rawName: string): string {
@@ -60,35 +93,16 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const { name } = await params
   const categoryName = getCategoryName(name)
   
-  // 카테고리 존재 여부와 아티클 수 확인
-  const { data: category, error: categoryError } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('name', categoryName)
-    .single()
+  try {
+    // 더 안전한 방식으로 카테고리 및 아티클 수 확인
+    const { articles } = await getArticles({
+      page: 1,
+      limit: 1,
+      category: categoryName
+    })
 
-  if (categoryError || !category) {
-    return {
-      title: '카테고리를 찾을 수 없습니다',
-      description: '요청하신 카테고리를 찾을 수 없습니다.',
-      robots: {
-        index: false,
-        follow: false,
-      },
-    }
-  }
-
-  // 해당 카테고리의 아티클 수와 최신 아티클 확인
-  const [{ count }] = await Promise.all([
-    supabase
-      .from('articles')
-      .select('*', { count: 'exact', head: true })
-      .eq('category_id', category.id)
-      .eq('status', 'published')
-  ])
-
-  const hasArticles = (count || 0) > 0
-  const articleCount = count || 0
+    const hasArticles = articles.length > 0
+    const articleCount = articles.length
   
   // 🔥 SEO 최적화된 메타 설명 생성 (콘텐츠 품질 강화)
   const baseDescription = getCategoryDescription(categoryName)
@@ -140,6 +154,54 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
       'content:type': 'category'
     }
   }
+  } catch (error) {
+    console.error('generateMetadata 오류:', error)
+    
+    // 오류 발생 시 기본 메타데이터 반환
+    const baseDescription = getCategoryDescription(categoryName)
+    const categoryKeywords = getCategoryKeywords(categoryName)
+    
+    return {
+      title: `${categoryName} - 픽틈`,
+      description: baseDescription.length > 160 ? baseDescription.substring(0, 157) + '...' : baseDescription,
+      keywords: ['픽틈', '뉴스', '이슈', ...categoryKeywords].join(', '),
+      alternates: {
+        canonical: `https://www.pickteum.com/category/${categoryName}`,
+      },
+      robots: {
+        index: true, // 기본적으로 색인 허용
+        follow: true,
+      },
+      openGraph: {
+        title: `${categoryName} - 틈 날 땐? 픽틈!`,
+        description: baseDescription,
+        type: 'website',
+        url: `https://www.pickteum.com/category/${categoryName}`,
+        siteName: '픽틈',
+        images: [
+          {
+            url: 'https://www.pickteum.com/pickteum_og.png',
+            width: 1200,
+            height: 630,
+            alt: `${categoryName} - 픽틈`,
+          },
+        ],
+        locale: 'ko_KR',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${categoryName} - 틈 날 땐? 픽틈!`,
+        description: baseDescription,
+        images: ['https://www.pickteum.com/pickteum_og.png'],
+        creator: '@pickteum',
+        site: '@pickteum',
+      },
+      other: {
+        'article:section': categoryName,
+        'content:type': 'category'
+      }
+    }
+  }
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ name: string }> }) {
@@ -147,54 +209,56 @@ export default async function CategoryPage({ params }: { params: Promise<{ name:
   const categoryName = getCategoryName(name)
   
   try {
-    // 카테고리 정보 조회
-    const { data: category, error: categoryError } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('name', categoryName)
-      .single()
+    // 🔥 더 안전한 데이터 fetching - lib/data.ts 사용
+    const { articles, total } = await getArticles({
+      page: 1,
+      limit: 20,
+      category: categoryName
+    })
 
-    if (categoryError || !category) {
-      notFound()
+    // 카테고리 정보 가져오기
+    const categories = await getCategories()
+    const category = categories.find(cat => cat.name === categoryName) || {
+      id: 'default',
+      name: categoryName,
+      color: getCategoryColor(categoryName)
     }
 
-    // 해당 카테고리의 아티클 조회
-    const { data: articles, error: articlesError } = await supabase
-      .from('articles')
-      .select(`
-        *,
-        category:categories(
-          id,
-          name,
-          color
-        )
-      `)
-      .eq('category_id', category.id)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(20)
-
-    if (articlesError) {
-      notFound()
-    }
-
-    // 아티클 데이터 포맷팅
-    const formattedArticles = articles?.map(article => ({
+    // 아티클이 없어도 페이지는 표시 (404로 가지 않음)
+    const formattedArticles = articles.map(article => ({
       id: article.id,
       title: article.title,
-      category: {
-        name: article.category?.name || categoryName,
-        color: article.category?.color || category.color
-      },
-      thumbnail: article.thumbnail || '/placeholder.svg',
-      date: article.published_at ? 
-        format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-        format(new Date(article.created_at), 'yyyy.MM.dd', { locale: ko }),
+      category: article.category,
+      thumbnail: article.thumbnail,
+      date: article.date,
+      publishedAt: article.publishedAt,
       slug: article.slug
-    })) || []
+    }))
 
-    // 🔥 구조화된 데이터 생성 (FAQ 추가)
-    const categoryCollectionSchema = generateCategoryCollectionSchema(category, articles || [])
+    // 🔥 구조화된 데이터용 아티클 형식 변환
+    const schemaArticles = articles.map(article => ({
+      id: article.id,
+      title: article.title,
+      slug: article.slug || article.id,
+      thumbnail: article.thumbnail,
+      published_at: article.publishedAt,
+      created_at: article.date,
+      updated_at: article.date,
+      content: "",
+      author: "픽틈 에디터",
+      category: {
+        id: category.id,
+        name: article.category.name,
+        color: article.category.color
+      },
+      views: 0
+    }))
+
+    // 🔥 구조화된 데이터 생성
+    const categoryCollectionSchema = generateCategoryCollectionSchema(
+      category, 
+      schemaArticles
+    )
     const breadcrumbSchema = generateBreadcrumbSchema([
       { name: "홈", url: "https://www.pickteum.com" },
       { name: categoryName, url: `https://www.pickteum.com/category/${categoryName}` }
@@ -307,6 +371,104 @@ export default async function CategoryPage({ params }: { params: Promise<{ name:
     )
   } catch (error) {
     console.error('카테고리 페이지 오류:', error)
-    notFound()
+    
+    // 오류가 발생해도 기본 카테고리 페이지 표시 (404로 가지 않음)
+    const defaultCategory = {
+      id: 'default',
+      name: categoryName,
+      color: getCategoryColor(categoryName)
+    }
+    
+    const faqSchema = generateCategoryFAQSchema(categoryName)
+    const breadcrumbSchema = generateBreadcrumbSchema([
+      { name: "홈", url: "https://www.pickteum.com" },
+      { name: categoryName, url: `https://www.pickteum.com/category/${categoryName}` }
+    ])
+
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(faqSchema)
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbSchema)
+          }}
+        />
+
+        <div className="flex min-h-screen flex-col bg-white">
+          <div className="w-full max-w-[480px] mx-auto flex flex-col min-h-screen">
+            <PickteumTracker categoryName={categoryName} />
+            <Header />
+            
+            <main className="flex-grow px-4 py-6">
+              <header className="mb-6">
+                <div className="flex items-center mb-2">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2"
+                    style={{ backgroundColor: defaultCategory.color }}
+                    role="presentation"
+                    aria-label={`${categoryName} 카테고리 색상`}
+                  />
+                  <h1 className="text-2xl font-bold text-[#212121]">{categoryName}</h1>
+                </div>
+                <p className="text-[#767676] mb-3" role="contentinfo">
+                  {categoryName} 카테고리의 최신 콘텐츠
+                </p>
+                
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-[#333333] leading-relaxed">
+                    {getCategoryDescription(categoryName)}
+                  </p>
+                </div>
+              </header>
+
+              {/* 콘텐츠 준비 중 메시지 */}
+              <section className="text-center py-12">
+                <div className="bg-gradient-to-br from-[#FFC83D]/10 to-[#FFB800]/10 rounded-lg p-8 mb-6">
+                  <h2 className="text-lg font-semibold text-[#212121] mb-3">
+                    {categoryName} 콘텐츠 준비 중
+                  </h2>
+                  <p className="text-[#767676] text-sm leading-relaxed mb-4">
+                    {categoryName} 카테고리의 양질의 콘텐츠를 준비하고 있습니다.<br />
+                    곧 유용한 정보들을 만나보실 수 있습니다.
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {getCategoryKeywords(categoryName).slice(0, 4).map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-white rounded-full text-xs text-[#767676] border"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </main>
+            
+            <Footer />
+          </div>
+        </div>
+      </>
+    )
   }
+}
+
+// 🔥 카테고리별 기본 색상 지정
+function getCategoryColor(categoryName: string): string {
+  const colorMapping: { [key: string]: string } = {
+    '건강': '#4CAF50',
+    '스포츠': '#2196F3', 
+    '정치/시사': '#9C27B0',
+    '경제': '#FF9800',
+    '라이프': '#FF5722',
+    '테크': '#607D8B'
+  }
+  
+  return colorMapping[categoryName] || '#767676'
 } 
