@@ -110,6 +110,8 @@ export default function Header() {
               width={32}
               height={32}
               className="h-8 w-auto"
+              priority
+              sizes="32px"
             />
           </Link>
         </div>

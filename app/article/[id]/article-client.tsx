@@ -14,7 +14,7 @@ import { ko } from "date-fns/locale"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import PickteumTracker from '@/components/analytics/pickteum-tracker'
-import { getImageUrl } from "@/lib/utils"
+import { getImageUrl, generateBlurDataURL } from "@/lib/utils"
 
 interface ArticleClientProps {
   articleId: string
@@ -317,6 +317,9 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
                 className="object-cover"
                 priority
                 sizes="100vw"
+                quality={85}
+                placeholder="blur"
+                blurDataURL={generateBlurDataURL(article.thumbnail)}
               />
             </figure>
 

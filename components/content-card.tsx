@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { getImageUrl } from "@/lib/utils"
+import { getImageUrl, generateBlurDataURL } from "@/lib/utils"
 import { useState } from "react"
 
 interface ContentCardProps {
@@ -43,6 +43,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const processedUrl = getImageUrl(thumbnail)
+  const blurDataURL = generateBlurDataURL(thumbnail)
   
   const relativeTime = publishedAt ? getRelativeTime(publishedAt, date) : null
   
@@ -105,7 +106,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
                   setImageError(true)
                 }}
                 placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAhEQACAQIHAQAAAAAAAAAAAAABAgADBAUREiExQVFhkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyugDKgSAASSccNqggjcElbOQp1XASQF1bgKs7Q2f8A/9k="
+                blurDataURL={blurDataURL}
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">

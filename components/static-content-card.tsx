@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { getImageUrl } from "@/lib/utils"
+import { getImageUrl, generateBlurDataURL } from "@/lib/utils"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 
@@ -33,6 +33,7 @@ function getRelativeTime(publishedAt?: string | null, fallbackDate?: string) {
 
 export default function StaticContentCard({ id, title, category, thumbnail, publishedAt, date }: StaticContentCardProps) {
   const imageUrl = getImageUrl(thumbnail)
+  const blurDataURL = generateBlurDataURL(thumbnail)
   const relative = getRelativeTime(publishedAt, date)
 
   return (
@@ -66,8 +67,10 @@ export default function StaticContentCard({ id, title, category, thumbnail, publ
               fill
               className="object-cover"
               sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 33vw"
-              quality={60}
+              quality={75}
               priority={false}
+              placeholder="blur"
+              blurDataURL={blurDataURL}
             />
           </div>
         </div>

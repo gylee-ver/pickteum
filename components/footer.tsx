@@ -81,6 +81,7 @@ export default function Footer() {
                 className="h-6 w-auto inline-block align-middle"
                 width={24}
                 height={24}
+                sizes="24px"
               />
             </Link>
             <Link href="/admin/login" className="text-sm font-medium text-[#FFC83D] hover:text-[#FFB800]">
