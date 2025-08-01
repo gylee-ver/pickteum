@@ -106,6 +106,12 @@ export async function middleware(request: NextRequest) {
     "frame-ancestors 'self' https://*.google.com https://*.googleads.com https://*.googlesyndication.com https://*.doubleclick.net https://*.gstatic.com;"
   )
   
+  // iframe 호환을 위한 추가 헤더 조정
+  response.headers.set('X-Frame-Options', 'ALLOWALL')
+  response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none')
+  response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
+  response.headers.set('Origin-Agent-Cluster', '?0')
+  
   // 기타 보안 헤더 유지
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
