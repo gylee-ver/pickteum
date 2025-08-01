@@ -10,10 +10,13 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getImageUrl } from "@/lib/utils"
 import StaticFeed from "@/components/static-feed"
+import { headers } from 'next/headers'
 
 // 🔥 캐시 무효화 설정 - 메인 페이지는 항상 최신 데이터 표시
 export const revalidate = 0 // 캐시 비활성화
-export const dynamic = 'force-dynamic' // 항상 동적 렌더링
+
+// 🔥 애드센스 호환성: 봇인 경우 정적 렌더링 허용, 일반 사용자는 동적 렌더링
+export const dynamic = 'auto' // 자동 렌더링 선택
 
 export const metadata: Metadata = {
   alternates: {
@@ -22,6 +25,13 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
+  // 🔥 애드센스 호환성: User-Agent 확인
+  const headersList = await headers()
+  const userAgent = headersList.get('user-agent') || ''
+  const isAdSenseBot = userAgent.includes('Mediapartners-Google') || 
+                       userAgent.includes('AdsBot-Google') || 
+                       userAgent.includes('Googlebot')
+
   // 🔥 서버 사이드에서 초기 아티클 데이터 가져오기 (애드센스 승인용)
   const { data: articles } = await supabase
     .from('articles')
@@ -96,10 +106,11 @@ export default async function Home() {
           <CategoryProvider>
             <main className="flex-grow px-4">
               <CategoryFilter />
-              {/* 정적 SSR 피드 – JS 비활성 환경 대응 */}
+              {/* 🔥 애드센스 호환성: 봇일 때는 정적 피드만, 사용자일 때는 동적 피드 추가 */}
               <StaticFeed articles={formattedArticles} />
-              {/* 기존 동적 피드 */}
-              <ContentFeed initialArticles={formattedArticles} />
+              {!isAdSenseBot && (
+                <ContentFeed initialArticles={formattedArticles} />
+              )}
             </main>
           </CategoryProvider>
           <Footer />

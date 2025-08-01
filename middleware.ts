@@ -11,11 +11,15 @@ export async function middleware(request: NextRequest) {
     const articleId = articleMatch[1]
     
     try {
-      // 🔥 Supabase에서 리다이렉트 규칙 확인
+      // 🔥 Supabase에서 리다이렉트 규칙 확인 (애드센스 호환성을 위한 타임아웃 추가)
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       
       if (supabaseUrl && supabaseKey) {
+        // 🔥 애드센스 미리보기 도구 호환성을 위한 타임아웃 설정
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 2000) // 2초 타임아웃
+        
         const response = await fetch(
           `${supabaseUrl}/rest/v1/redirects?from_url=eq.${pathname}&select=to_url`,
           {
@@ -23,9 +27,12 @@ export async function middleware(request: NextRequest) {
               'apikey': supabaseKey,
               'Authorization': `Bearer ${supabaseKey}`,
               'Content-Type': 'application/json'
-            }
+            },
+            signal: controller.signal
           }
         )
+        
+        clearTimeout(timeoutId)
         
         if (response.ok) {
           const redirects = await response.json()
@@ -40,7 +47,7 @@ export async function middleware(request: NextRequest) {
       }
     } catch (error) {
       console.error('Redirect middleware error:', error)
-      // 에러 발생 시 정상 처리 계속
+      // 🔥 애드센스 호환성: 에러 발생 시에도 정상 처리 계속 (타임아웃, 네트워크 오류 등)
     }
   }
   
@@ -50,11 +57,15 @@ export async function middleware(request: NextRequest) {
     const code = shortUrlMatch[1]
     
     try {
-      // 🔥 Supabase에서 리다이렉트 규칙 확인
+      // 🔥 Supabase에서 리다이렉트 규칙 확인 (애드센스 호환성을 위한 타임아웃 추가)
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       
       if (supabaseUrl && supabaseKey) {
+        // 🔥 애드센스 미리보기 도구 호환성을 위한 타임아웃 설정
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 2000) // 2초 타임아웃
+        
         const response = await fetch(
           `${supabaseUrl}/rest/v1/redirects?from_url=eq.${pathname}&select=to_url`,
           {
@@ -62,9 +73,12 @@ export async function middleware(request: NextRequest) {
               'apikey': supabaseKey,
               'Authorization': `Bearer ${supabaseKey}`,
               'Content-Type': 'application/json'
-            }
+            },
+            signal: controller.signal
           }
         )
+        
+        clearTimeout(timeoutId)
         
         if (response.ok) {
           const redirects = await response.json()
@@ -79,7 +93,7 @@ export async function middleware(request: NextRequest) {
       }
     } catch (error) {
       console.error('Short URL redirect middleware error:', error)
-      // 에러 발생 시 정상 처리 계속
+      // 🔥 애드센스 호환성: 에러 발생 시에도 정상 처리 계속 (타임아웃, 네트워크 오류 등)
     }
   }
 

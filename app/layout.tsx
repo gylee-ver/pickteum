@@ -4,6 +4,7 @@ import Script from 'next/script'
 import OrganizationSchema from '@/components/organization-schema'
 import WebsiteSchema from '@/components/website-schema'
 
+
 const baseUrl = 'https://www.pickteum.com'
 
 export const metadata: Metadata = {
@@ -111,12 +112,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         
-        {/* 🔥 모바일 최적화 메타태그 (CLS 방지) */}
+        {/* 🔥 기본 메타태그 (애드센스 호환성 고려) */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* 🔥 애드센스 호환성: 모바일 전용 메타태그 제거로 데스크톱 미리보기 도구와의 호환성 향상 */}
         
         {/* 🔧 성능 최적화 메타태그 */}
         <meta name="theme-color" content="#F2FF66" />
