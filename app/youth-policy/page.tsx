@@ -4,6 +4,39 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: '청소년보호정책',
+  description: '스튜디오시운의 청소년보호정책을 확인하세요. 청소년이 건전한 환경에서 안전하게 서비스를 이용할 수 있도록 보호조치를 시행합니다.',
+  alternates: {
+    canonical: 'https://www.pickteum.com/youth-policy',
+  },
+  openGraph: {
+    title: '청소년보호정책 - 틈 날 땐? 픽틈!',
+    description: '스튜디오시운의 청소년보호정책을 확인하세요. 청소년이 건전한 환경에서 안전하게 서비스를 이용할 수 있도록 보호조치를 시행합니다.',
+    type: 'website',
+    url: 'https://www.pickteum.com/youth-policy',
+    siteName: '픽틈',
+    images: [
+      {
+        url: 'https://www.pickteum.com/pickteum_og.png',
+        width: 1200,
+        height: 630,
+        alt: '청소년보호정책 - 픽틈',
+      },
+    ],
+    locale: 'ko_KR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '청소년보호정책 - 틈 날 땐? 픽틈!',
+    description: '스튜디오시운의 청소년보호정책을 확인하세요.',
+    images: ['https://www.pickteum.com/pickteum_og.png'],
+    creator: '@pickteum',
+    site: '@pickteum',
+  },
+}
 
 export default function YouthPolicyPage() {
   return (

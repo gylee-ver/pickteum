@@ -70,7 +70,7 @@ ${recentArticles?.map(article => {
     return new NextResponse(newsSitemap, {
       headers: {
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=1800, s-maxage=1800', // 30분 캐시
+        'Cache-Control': 'public, max-age=600, s-maxage=900, stale-while-revalidate=600', // 10분 캐시, 15분 CDN 캐시, 10분 stale-while-revalidate
       },
     })
   } catch (error) {
