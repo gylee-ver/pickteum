@@ -14,6 +14,11 @@
 - `next.config.mjs`에서 `eslint.ignoreDuringBuilds: true` 설정
 - Vercel 배포 시 ESLint 에러로 인한 빌드 실패 방지
 
+### 4. Vercel.json 정규식 패턴 오류 수정 🆕
+- 잘못된 정규식 패턴으로 인한 "invalid source pattern" 오류 해결
+- 복잡한 negative lookahead 패턴을 더 안전한 패턴으로 교체
+- Vercel 호환 가능한 헤더 설정으로 최적화
+
 ## 🔧 Vercel 환경 변수 설정
 
 Vercel 대시보드에서 다음 환경 변수들을 설정해야 합니다:
