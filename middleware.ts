@@ -100,8 +100,12 @@ export async function middleware(request: NextRequest) {
   // 🔥 헤더 설정 적용 (Edge Runtime 호환)
   const response = NextResponse.next()
   
-  // 🔥 보안/품질 경고 최소화를 위한 표준 헤더 적용
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  // 🔥 프레임 임베드 정책: X-Frame-Options 대신 CSP frame-ancestors로 화이트리스트 허용
+  // Google 도구(미리보기/광고)에서만 임베드를 허용하고, 일반 임의 임베드는 차단
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.google.com https://*.googleads.com https://*.googlesyndication.com https://*.doubleclick.net https://*.gstatic.com"
+  )
   response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none')
   response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
   response.headers.set('Origin-Agent-Cluster', '?0')
