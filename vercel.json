@@ -14,7 +14,6 @@
     {
       "source": "/(.*)",
       "headers": [
-        // X-Frame-Options는 제거하고 CSP frame-ancestors로 관리
         {
           "key": "Content-Security-Policy",
           "value": "frame-ancestors 'self' https://*.google.com https://*.googleads.com https://*.googlesyndication.com https://*.doubleclick.net https://*.gstatic.com"
