@@ -241,6 +241,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   return (
     <>
       <ArticleSchema article={article} />
+      {/* 🔥 JS 비활성/렌더 제한 환경에서만 보이는 SSR 폴백 */}
+      <noscript>
+        <article className="px-4 py-6">
+          <header className="mb-4">
+            <h1 className="text-xl font-bold text-[#212121] mb-2 leading-tight">{article.title}</h1>
+          </header>
+          <section
+            className="prose prose-sm max-w-none text-[#333333] article-content"
+            dangerouslySetInnerHTML={{ __html: article.content }}
+          />
+        </article>
+      </noscript>
+
+      {/* 기존 상호작용/트래킹/내부링크 UI는 그대로 유지 */}
       <ArticleClient articleId={id} initialArticle={article} />
     </>
   )

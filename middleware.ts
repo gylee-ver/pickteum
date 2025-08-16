@@ -100,8 +100,8 @@ export async function middleware(request: NextRequest) {
   // 🔥 헤더 설정 적용 (Edge Runtime 호환)
   const response = NextResponse.next()
   
-  // 🔥 AdSense 호환 보안 헤더 (간소화)
-  response.headers.set('X-Frame-Options', 'ALLOWALL')
+  // 🔥 보안/품질 경고 최소화를 위한 표준 헤더 적용
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
   response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none')
   response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
   response.headers.set('Origin-Agent-Cluster', '?0')
