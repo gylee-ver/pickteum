@@ -51,11 +51,19 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   const loadingRef = useRef(false)
   const pageSize = 5
 
-  // JS 로드 후 정적(SSR) 피드 숨김
+  // JS 로드 후 정적(SSR) 피드 숨김 (단, 구글/애드센스/크롤러는 숨기지 않음)
   useEffect(() => {
-    const staticEl = document.getElementById('static-feed')
-    if (staticEl) {
-      staticEl.style.display = 'none'
+    try {
+      const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase()
+      const isBot = /googlebot|adsbot-google|mediapartners-google|bingbot|duckduckbot|baiduspider|yandexbot|semrushbot/.test(ua)
+      if (isBot) return
+
+      const staticEl = document.getElementById('static-feed')
+      if (staticEl) {
+        staticEl.style.display = 'none'
+      }
+    } catch (_) {
+      // no-op
     }
   }, [])
 
