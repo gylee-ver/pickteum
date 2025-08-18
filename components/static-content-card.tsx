@@ -33,6 +33,7 @@ function getRelativeTime(publishedAt?: string | null, fallbackDate?: string) {
 
 export default function StaticContentCard({ id, title, category, thumbnail, publishedAt, date }: StaticContentCardProps) {
   const imageUrl = getImageUrl(thumbnail)
+  const isSupabaseImage = imageUrl.includes('supabase.co/storage')
   const blurDataURL = generateBlurDataURL(thumbnail)
   const relative = getRelativeTime(publishedAt, date)
 
@@ -69,6 +70,7 @@ export default function StaticContentCard({ id, title, category, thumbnail, publ
               sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 33vw"
               quality={75}
               priority={false}
+              unoptimized={isSupabaseImage}
               placeholder="blur"
               blurDataURL={blurDataURL}
             />

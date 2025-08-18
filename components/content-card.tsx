@@ -43,6 +43,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const processedUrl = getImageUrl(thumbnail)
+  const isSupabaseImage = processedUrl.includes('supabase.co/storage')
   const blurDataURL = generateBlurDataURL(thumbnail)
   
   const relativeTime = publishedAt ? getRelativeTime(publishedAt, date) : null
@@ -99,6 +100,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
                 quality={75}
                 loading={priority ? "eager" : "lazy"}
                 priority={priority}
+                unoptimized={isSupabaseImage}
                 onLoadingComplete={() => setImageLoaded(true)}
                 onError={() => {
                   console.error('이미지 로드 실패:', processedUrl)

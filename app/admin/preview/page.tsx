@@ -305,6 +305,7 @@ function PreviewContent() {
                   className="object-cover"
                   priority
                   sizes="100vw"
+                  unoptimized={thumbnailUrl.includes('supabase.co/storage')}
                   onError={(e) => {
                     debugError('🖼️ 썸네일 이미지 로드 오류:', thumbnailUrl)
                     // 오류 시 placeholder로 대체
