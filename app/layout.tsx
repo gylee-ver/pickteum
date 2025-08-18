@@ -121,11 +121,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#F2FF66" />
 
         {/* 🔥 Google AdSense - 광고 승인 및 수익화 */}
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6018069358099295" crossOrigin="anonymous"></script>
         
         {/* Google Analytics 4 - 픽틈 맞춤 설정 (성능 최적화 - lazyOnload) */}
         <Script
