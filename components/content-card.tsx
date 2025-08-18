@@ -91,8 +91,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
               <Image
                 src={processedUrl}
                 alt={title}
-                width={480}
-                height={270}
+                fill
                 className={`object-cover transition-opacity duration-300 ${
                   imageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
@@ -100,7 +99,7 @@ export default function ContentCard({ id, title, category, thumbnail, date, publ
                 quality={75}
                 loading={priority ? "eager" : "lazy"}
                 priority={priority}
-                onLoad={() => setImageLoaded(true)}
+                onLoadingComplete={() => setImageLoaded(true)}
                 onError={() => {
                   console.error('이미지 로드 실패:', processedUrl)
                   setImageError(true)
