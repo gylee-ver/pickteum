@@ -71,7 +71,5 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   },
-  "overrides": {
-    "vaul": "^0.9.9"
-  }
+  "overrides": {}
 }
