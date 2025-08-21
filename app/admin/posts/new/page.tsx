@@ -678,48 +678,74 @@ export default function NewPostPage() {
       console.log('저장할 아티클 데이터:', JSON.stringify(articleData, null, 2))
       console.log('savedArticleId:', savedArticleId)
 
+      // 1차 시도: 클라이언트 Supabase
       let result
-
-      if (savedArticleId) {
-        // 기존 아티클 업데이트
-        console.log('기존 아티클 업데이트 중...')
-        const { data, error } = await supabase
-          .from('articles')
-          .update(articleData)
-          .eq('id', savedArticleId)
-          .select()
-          .single()
-
-        result = { data, error }
-      } else {
-        // 새 아티클 생성
-        console.log('새 아티클 생성 중...')
-        const { data, error } = await supabase
-          .from('articles')
-          .insert([articleData])
-          .select()
-          .single()
-
-        result = { data, error }
+      try {
+        if (savedArticleId) {
+          console.log('기존 아티클 업데이트 중...')
+          const { data, error } = await supabase
+            .from('articles')
+            .update(articleData)
+            .eq('id', savedArticleId)
+            .select()
+            .single()
+          result = { data, error }
+        } else {
+          console.log('새 아티클 생성 중...')
+          const { data, error } = await supabase
+            .from('articles')
+            .insert([articleData])
+            .select()
+            .single()
+          result = { data, error }
+        }
+      } catch (clientError) {
+        result = { data: null, error: clientError as any }
       }
 
+      // RLS/권한 문제 등 실패 시 서버 API 폴백
       if (result.error) {
-        console.error('==== Supabase 에러 상세 정보 ====')
-        console.error('전체 에러 객체:', JSON.stringify(result.error, null, 2))
-        console.error('================================')
-        
-        toast({
-          variant: "destructive",
-          title: "저장 실패",
-          description: `아티클 저장 중 오류가 발생했습니다: ${result.error.message}`,
-        })
-        
-        setIsSaving(false)
-        return
+        const msg = (result.error as any)?.message || ''
+        const code = (result.error as any)?.code || ''
+        const isPermissionIssue = /permission|rls|401|403|42501/i.test(msg) || /42501|PGRST/i.test(code)
+        if (isPermissionIssue) {
+          console.warn('클라이언트 저장 실패, 서버 API로 폴백 시도:', { code, msg })
+          const endpoint = '/api/admin/articles'
+          const method = savedArticleId ? 'PUT' : 'POST'
+          const payload = savedArticleId ? { id: savedArticleId, data: articleData } : articleData
+          const res = await fetch(endpoint, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            toast({
+              variant: 'destructive',
+              title: '저장 실패',
+              description: `서버 저장 실패: ${err.error || res.statusText}`,
+            })
+            setIsSaving(false)
+            return
+          }
+          const json = await res.json()
+          result = { data: json.data, error: null }
+        } else {
+          console.error('==== Supabase 에러 상세 정보 ====')
+          console.error('전체 에러 객체:', JSON.stringify(result.error, null, 2))
+          console.error('================================')
+          toast({
+            variant: 'destructive',
+            title: '저장 실패',
+            description: `아티클 저장 중 오류가 발생했습니다: ${(result.error as any).message}`,
+          })
+          setIsSaving(false)
+          return
+        }
       }
 
       // 성공 시 처리
-      if (!savedArticleId) {
+      if (!savedArticleId && result.data) {
         setSavedArticleId(result.data.id)
         setSlug(uniqueSlug)
       }
@@ -926,34 +952,26 @@ export default function NewPostPage() {
 
       console.log('📄 예약 발행 아티클 데이터:', JSON.stringify(articleData, null, 2))
 
-      // Supabase에 아티클 저장
-      console.log('💾 Supabase에 저장 시작...')
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([articleData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ 예약 발행 저장 오류:', error)
-        
-        if (error.code === '23505' && error.message.includes('articles_slug_key')) {
-          toast({
-            variant: "destructive",
-            title: "URL 슬러그 중복",
-            description: "유사한 제목의 글이 이미 존재합니다. 제목을 조금 수정해주세요.",
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "예약 발행 실패",
-            description: `아티클 예약 발행 중 오류가 발생했습니다: ${error.message}`,
-          })
-        }
-        
+      // 저장 - 서버 API 우선 사용 (RLS 회피)
+      console.log('💾 서버 API로 예약 발행 저장 시작...')
+      const res = await fetch('/api/admin/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(articleData)
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('❌ 예약 발행 서버 저장 오류:', err)
+        const message = err?.error || res.statusText
+        toast({
+          variant: 'destructive',
+          title: '예약 발행 실패',
+          description: message.includes('slug') ? 'URL 슬러그가 중복되었습니다. 제목을 조금 수정해주세요.' : `아티클 예약 발행 중 오류가 발생했습니다: ${message}`,
+        })
         setIsSaving(false)
         return
       }
+      const { data } = await res.json()
 
       console.log('✅ 예약 발행 성공:', data)
 
