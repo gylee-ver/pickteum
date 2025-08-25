@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import supabase from "@/lib/supabase"
+import { getArticleById } from '@/lib/data'
 import ArticleClient from './article-client'
 import ArticleSchema from '@/components/article-schema'
 import { generateSocialMeta, getDefaultMetadata } from '@/lib/social-meta'
@@ -21,103 +22,21 @@ function getArticleTags(articleId: string) {
 
 // SEO 최적화: generateMetadata 함수
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  console.log('🔥 SEO 최적화 아티클 메타데이터 v5.1 - slug 지원')
-  
+  // 성능 최적화: 메타데이터 단계에서 DB 조회를 생략하여 초기 렌더 감소
   try {
     const { id: rawId } = await params
     const id = decodeURIComponent(rawId)
-    console.log('🔥 받은 ID(디코딩):', id)
-    
-    // UUID 검증
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    
-    console.log('🔥 데이터베이스 조회 시작:', id, isUUID ? '(UUID)' : '(slug)')
-    
-    // 🔥 타임아웃 증가로 안정성 향상 (3초 → 8초)
-    const { data: article, error } = await Promise.race([
-      isUUID
-        ? supabase
-            .from('articles')
-            .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
-            .eq('id', id)
-            .eq('status', 'published')
-            .single()
-        : supabase
-            .from('articles')
-            .select('id, title, content, seo_description, thumbnail, author, category:categories(name), published_at, updated_at')
-            .eq('slug', id)
-            .eq('status', 'published')
-            .order('published_at', { ascending: false })
-            .limit(1)
-            .then(result => ({ 
-              data: result.data?.[0] || null, 
-              error: result.error 
-            })),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-    ]) as any
-    
-    console.log('🔥 데이터베이스 결과:', { article: !!article, error: error?.message })
-    
-    if (error || !article) {
-      console.log('🔥 아티클 없음, 기본 메타데이터 반환')
-      return getDefaultMetadata()
-    }
-    
-    console.log('🔥 아티클 발견, SEO 최적화 메타데이터 생성 중:', article.title)
-    
-    // 설명 생성 - seo_description을 먼저 사용하고, 없으면 content에서 추출
-    let description = article.seo_description
-    if (!description && article.content) {
-      // HTML 태그 제거 후 첫 160자 추출
-      const plainText = article.content.replace(/<[^>]*>/g, '').trim()
-      description = plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')
-    }
-    description = description || '픽틈 아티클'
-    
-    // 🔥 이미지 URL 절대 경로 보장
-    const imageUrl = article.thumbnail 
-      ? (article.thumbnail.startsWith('http') 
-          ? article.thumbnail 
-          : `https://www.pickteum.com${article.thumbnail}`)
-      : 'https://www.pickteum.com/pickteum_og.png'
-    
-    // 🔥 개선된 SEO 메타데이터 생성
-    const metadata = {
-      ...generateSocialMeta({
-        title: article.title.length > 50 ? 
-          `${article.title.substring(0, 50)}...` : 
-          article.title,
-        description,
-        imageUrl,
+    const base = getDefaultMetadata()
+    return {
+      ...base,
+      alternates: { canonical: `https://www.pickteum.com/article/${id}` },
+      openGraph: {
+        ...(base.openGraph as any),
         url: `https://www.pickteum.com/article/${id}`,
-        type: 'article',
-        publishedTime: article.published_at,
-        modifiedTime: article.updated_at,
-        section: article.category?.name,
-        content: article.content, // 🔥 키워드 추출용 콘텐츠 추가
-        categoryName: article.category?.name // 🔥 카테고리명 추가
-      }),
-      // 🔥 추가 SEO 요소
-      alternates: {
-        canonical: `https://www.pickteum.com/article/${id}`
-      },
-      // 🔥 키워드는 이제 generateSocialMeta에서 자동 생성됨
-      other: {
-        'article:published_time': article.published_at,
-        'article:modified_time': article.updated_at,
-        'article:section': article.category?.name || '뉴스',
-        'article:author': article.author || '픽틈'
+        images: [{ url: 'https://www.pickteum.com/pickteum_og.png' }]
       }
     }
-    
-    console.log('🔥 SEO 최적화 메타데이터 생성 완료', {
-      title: metadata.title,
-      imageUrl: metadata.openGraph?.images?.[0]?.url
-    })
-    return metadata
-    
-  } catch (error) {
-    console.error('🔥 메타데이터 생성 오류:', error)
+  } catch {
     return getDefaultMetadata()
   }
 }
@@ -140,60 +59,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   // UUID 검증 로직 추가
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   
-  let query
-  if (isUUID) {
-    query = supabase
-      .from('articles')
-      .select('*, category:categories(*)')
-      .eq('id', id)
-      .eq('status', 'published')
-      .single()
-  } else {
-    // 🔥 중복 slug 문제 해결: 가장 최근 발행된 글을 우선 선택
-    query = supabase
-      .from('articles') 
-      .select('*, category:categories(*)')
-      .eq('slug', id)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(1)
-  }
-
-  // 🔥 개선된 에러 처리 - 재시도 로직 추가
-  let article = null
-  let error = null
-  
-  try {
-    const result = await Promise.race([
-      query,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 10000))
-    ]) as any
-    
-    // slug로 조회할 때는 배열로 반환되므로 첫 번째 요소 선택
-    if (isUUID) {
-      article = result.data
-    } else {
-      article = result.data?.[0] || null
-    }
-    error = result.error
-    
-    // 🔥 첫 번째 시도 실패 시 재시도 (네트워크 불안정 대응)
-    if (error && !article) {
-      console.log('🔄 데이터베이스 재시도 중...', error.message)
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 1초 대기
-      
-      const retryResult = await query
-      if (isUUID) {
-        article = retryResult.data
-      } else {
-        article = retryResult.data?.[0] || null
-      }
-      error = retryResult.error
-    }
-  } catch (timeoutError) {
-    console.error('⏰ 데이터베이스 타임아웃:', timeoutError)
-    error = timeoutError
-  }
+  // 서버 전용 클라이언트로 단일 조회 (더 빠르고 간결)
+  let article = await getArticleById(id)
+  let error: any = null
   
   console.log('📊 페이지 데이터 조회:', { found: !!article, error: error?.message })
 
@@ -240,7 +108,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <ArticleSchema article={article} />
+      {(() => {
+        const schemaArticle = {
+          id: article.id,
+          title: article.title,
+          content: article.content || '',
+          seo_description: undefined as string | undefined,
+          published_at: (article as any).published_at || (article as any).publishedAt || new Date().toISOString(),
+          updated_at: (article as any).updated_at || (article as any).publishedAt || new Date().toISOString(),
+          thumbnail_url: (article as any).thumbnail || (article as any).thumbnail_url,
+          category: { name: article.category?.name || '뉴스' },
+          author: (article as any).author || '픽틈'
+        }
+        return <ArticleSchema article={schemaArticle} />
+      })()}
       {/* 🔥 JS 비활성/렌더 제한 환경에서만 보이는 SSR 폴백 */}
       <noscript>
         <article className="px-4 py-6">
@@ -249,7 +130,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           </header>
           <section
             className="prose prose-sm max-w-none text-[#333333] article-content"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: (article as any).content || '' }}
           />
         </article>
       </noscript>
