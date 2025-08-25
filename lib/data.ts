@@ -203,7 +203,7 @@ export async function getArticleById(id: string): Promise<Article | null> {
   if (!article) return null
 
   return {
-    id: article.slug || article.id,
+    id: article.id, // UUID 유지 (클라이언트 액션용)
     title: article.title,
     content: article.content,
     category: {
@@ -216,7 +216,7 @@ export async function getArticleById(id: string): Promise<Article | null> {
       format(new Date(), 'yyyy.MM.dd', { locale: ko }),
     publishedAt: article.published_at,
     views: article.views || 0,
-    slug: article.slug,
+    slug: article.slug, // 링크용
     category_id: article.category_id
   }
 }
