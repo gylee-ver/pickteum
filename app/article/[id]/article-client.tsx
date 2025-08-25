@@ -310,17 +310,25 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
 
             {/* 썸네일 이미지 */}
             <figure className="relative w-full aspect-video rounded-lg overflow-hidden mb-6">
-              <Image
-                src={getImageUrl(article.thumbnail)}
-                alt={article.thumbnail_alt || article.title}
-                fill
-                className="object-cover"
-                priority
-                sizes="100vw"
-                quality={85}
-                placeholder="blur"
-                blurDataURL={generateBlurDataURL(article.thumbnail)}
-              />
+              {(() => {
+                const imageUrl = getImageUrl(article.thumbnail)
+                const isSupabaseImage = imageUrl.includes('supabase.co/storage')
+                const blurDataURL = generateBlurDataURL(article.thumbnail)
+                return (
+                  <Image
+                    src={imageUrl}
+                    alt={article.thumbnail_alt || article.title}
+                    fill
+                    className="object-cover"
+                    priority
+                    sizes="100vw"
+                    quality={85}
+                    placeholder="blur"
+                    blurDataURL={blurDataURL}
+                    unoptimized={isSupabaseImage}
+                  />
+                )
+              })()}
             </figure>
 
             {/* 🔥 SEO 최적화된 아티클 본문 */}
