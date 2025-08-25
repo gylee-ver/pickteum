@@ -68,6 +68,26 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 카테고리 전환 시 StaticFeed 표시/숨김 토글 (봇 제외)
+  useEffect(() => {
+    try {
+      const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase()
+      const isBot = /googlebot|adsbot-google|mediapartners-google|bingbot|duckduckbot|baiduspider|yandexbot|semrushbot/.test(ua)
+      if (isBot) return
+
+      const staticEl = document.getElementById('static-feed')
+      if (!staticEl) return
+
+      if (activeCategory === '전체') {
+        staticEl.style.display = ''
+      } else {
+        staticEl.style.display = 'none'
+      }
+    } catch (_) {
+      // no-op
+    }
+  }, [activeCategory])
+
   // 카테고리 변경을 감지하는 Ref
   const isCategoryChanged = useRef(false);
 
