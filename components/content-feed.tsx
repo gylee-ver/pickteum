@@ -51,20 +51,21 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   const loadingRef = useRef(false)
   const pageSize = 5
 
-  // JS 로드 후 정적(SSR) 피드 숨김 (단, 구글/애드센스/크롤러는 숨기지 않음)
+  // 성능 최적화: 초기에 SSR 정적 피드를 그대로 유지하고,
+  // 동적 피드는 추가 로드(무한스크롤) 전용으로 사용한다.
+  // 중복 렌더링을 방지하기 위해 '전체' 카테고리에서 initialArticles가 있을 경우
+  // 동적 피드는 2페이지부터 시작한다.
+  const bootstrappedRef = useRef(false)
   useEffect(() => {
-    try {
-      const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase()
-      const isBot = /googlebot|adsbot-google|mediapartners-google|bingbot|duckduckbot|baiduspider|yandexbot|semrushbot/.test(ua)
-      if (isBot) return
-
-      const staticEl = document.getElementById('static-feed')
-      if (staticEl) {
-        staticEl.style.display = 'none'
-      }
-    } catch (_) {
-      // no-op
+    if (bootstrappedRef.current) return
+    if (activeCategory === '전체' && initialArticles.length > 0) {
+      setContent([]) // 초기 항목은 StaticFeed에서만 표시
+      setLoading(false)
+      setHasMore(true)
+      setPage(2) // 무한스크롤은 2페이지부터 시작
+      bootstrappedRef.current = true
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 카테고리 변경을 감지하는 Ref
@@ -107,12 +108,10 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
         return;
       }
       
-      // SSR로 받은 초기 데이터가 있고, 첫 페이지이며, '전체' 카테고리일 때는 로드하지 않음
+      // 초기에는 StaticFeed가 첫 페이지를 담당하므로 여기서 별도 로드하지 않음
       if (page === 1 && initialArticles.length > 0 && activeCategory === '전체' && !isCategoryChanged.current) {
-        setContent(initialArticles);
-        setLoading(false);
-        setHasMore(initialArticles.length === pageSize);
-        return;
+        setLoading(false)
+        return
       }
 
       await loadArticles();
@@ -152,9 +151,9 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
       
       const formattedData: Article[] = result.articles
       
-      // 첫 페이지 이미지들 프리로딩
+      // 첫 로드 시 핵심 이미지 1장만 프리로딩 (과도한 프리로드 방지)
       if (page === 1) {
-        const imageUrls = formattedData.slice(0, 3).map(item => item.thumbnail)
+        const imageUrls = formattedData.slice(0, 1).map(item => item.thumbnail)
         preloadImages(imageUrls)
       }
       
@@ -183,9 +182,8 @@ export default function ContentFeed({ initialArticles = [] }: ContentFeedProps) 
   // 필터링된 콘텐츠 – 샘플 데이터를 노출하지 않고, 에러 시 빈 배열 반환
   const filteredContent = content.length > 0 ? content : []
   
-  // 전체 탭에서는 기본 5개만 표시
-  const displayedContent = activeCategory === "전체" && page === 1 ? 
-    filteredContent.slice(0, 5) : filteredContent
+  // StaticFeed가 1페이지를 담당하므로, 동적 피드는 그대로 표시
+  const displayedContent = filteredContent
 
   const handleLoadMore = () => {
     if (!loading && hasMore) {
