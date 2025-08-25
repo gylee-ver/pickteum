@@ -11,7 +11,9 @@ export default function SeoImage({
   alt,
   ...props 
 }: SeoImageProps) {
-  const blurDataURL = generateBlurDataURL(typeof src === 'string' ? src : null)
+  const stringSrc = typeof src === 'string' ? src : null
+  const blurDataURL = generateBlurDataURL(stringSrc)
+  const isSupabaseImage = typeof src === 'string' && src.includes('supabase.co/storage')
 
   return (
     <Image
@@ -21,6 +23,7 @@ export default function SeoImage({
       placeholder="blur"
       blurDataURL={blurDataURL}
       quality={85}
+      unoptimized={isSupabaseImage}
       {...props}
     />
   )

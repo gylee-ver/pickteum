@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { getImageUrl, generateBlurDataURL } from "@/lib/utils"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import AdminLayout from "@/components/admin/layout"
@@ -682,13 +683,25 @@ export default function PostsPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="relative w-16 h-10 rounded overflow-hidden">
-                      <Image
-                        src={article.thumbnail || "/placeholder.svg"}
-                        alt={article.title}
-                        fill
-                        className="object-cover"
-                      />
+                    <div className="relative w-16 h-10 rounded overflow-hidden bg-gray-100">
+                      {(() => {
+                        const imageUrl = getImageUrl(article.thumbnail)
+                        const isSupabaseImage = imageUrl.includes('supabase.co/storage')
+                        const blurDataURL = generateBlurDataURL(article.thumbnail)
+                        return (
+                          <Image
+                            src={imageUrl}
+                            alt={article.title}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                            quality={60}
+                            placeholder="blur"
+                            blurDataURL={blurDataURL}
+                            unoptimized={isSupabaseImage}
+                          />
+                        )
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
