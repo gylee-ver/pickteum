@@ -117,7 +117,7 @@ export default function Header() {
         </div>
 
         {/* 검색 버튼 */}
-        <Button variant="ghost" size="icon" onClick={toggleSearch}>
+        <Button variant="ghost" size="icon" onClick={toggleSearch} aria-label="검색 열기">
           <Search size={20} />
           <span className="sr-only">검색</span>
         </Button>

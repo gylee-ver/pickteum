@@ -81,6 +81,7 @@ export default async function Home() {
               {/* 🔥 애드센스 호환성: 봇일 때는 정적 피드만, 사용자일 때는 동적 피드 추가 */}
               <StaticFeed articles={formattedArticles} />
               {!isAdSenseBot && (
+                // 성능 최적화: StaticFeed가 1페이지를 담당하므로 동적 피드는 2페이지부터 로드하도록 내부에서 관리
                 <ContentFeed initialArticles={formattedArticles} />
               )}
             </main>
