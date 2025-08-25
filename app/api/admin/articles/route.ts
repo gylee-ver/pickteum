@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { supabaseServer } from '@/lib/data'
+import { supabaseServer, hasServiceRoleKey } from '@/lib/data'
 
 // 서버 전용: 아티클 생성
 export async function POST(request: NextRequest) {
   try {
+    if (!hasServiceRoleKey) {
+      return NextResponse.json(
+        { error: 'SUPABASE_SERVICE_ROLE_KEY가 설정되지 않아 발행을 처리할 수 없습니다.' },
+        { status: 500 }
+      )
+    }
     const body = await request.json()
     const now = new Date().toISOString()
 
@@ -24,6 +30,22 @@ export async function POST(request: NextRequest) {
       created_at: body.created_at || now,
       updated_at: body.updated_at || now,
       views: typeof body.views === 'number' ? body.views : 0
+    }
+
+    // 카테고리 이름으로 ID 자동 매핑 (category_id가 없고 category_name이 있을 때)
+    if (!articleData.category_id && body.category_name) {
+      const { data: cat, error: catErr } = await supabaseServer
+        .from('categories')
+        .select('id')
+        .eq('name', String(body.category_name))
+        .limit(1)
+        .single()
+      if (catErr) {
+        return NextResponse.json({ error: `카테고리 확인 실패: ${catErr.message}` }, { status: 400 })
+      }
+      if (cat?.id) {
+        ;(articleData as any).category_id = cat.id
+      }
     }
 
     // 필수 필드 검증
@@ -74,6 +96,12 @@ export async function POST(request: NextRequest) {
 // 서버 전용: 아티클 업데이트
 export async function PUT(request: NextRequest) {
   try {
+    if (!hasServiceRoleKey) {
+      return NextResponse.json(
+        { error: 'SUPABASE_SERVICE_ROLE_KEY가 설정되지 않아 수정/발행을 처리할 수 없습니다.' },
+        { status: 500 }
+      )
+    }
     const body = await request.json()
     const { id, data: payload } = body || {}
     if (!id) {
@@ -95,6 +123,22 @@ export async function PUT(request: NextRequest) {
       tags: Array.isArray(payload?.tags) ? payload.tags : [],
       published_at: payload?.published_at ?? null,
       updated_at: now
+    }
+
+    // 카테고리 이름으로 ID 자동 매핑 (category_id가 없고 category_name이 있을 때)
+    if (!updateData.category_id && payload?.category_name) {
+      const { data: cat, error: catErr } = await supabaseServer
+        .from('categories')
+        .select('id')
+        .eq('name', String(payload.category_name))
+        .limit(1)
+        .single()
+      if (catErr) {
+        return NextResponse.json({ error: `카테고리 확인 실패: ${catErr.message}` }, { status: 400 })
+      }
+      if (cat?.id) {
+        ;(updateData as any).category_id = cat.id
+      }
     }
 
     if (!updateData.title || !updateData.content || !updateData.category_id || !updateData.slug) {

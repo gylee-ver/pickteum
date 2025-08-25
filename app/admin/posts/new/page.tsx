@@ -101,66 +101,27 @@ export default function NewPostPage() {
     }
   }
 
-  // 카테고리 데이터 로드
+  // 카테고리 데이터 로드 (서버 API 사용: UUID 보장)
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-        
-        if (error) {
-          console.error('카테고리 로드 오류:', error)
-          // 오류 시 기본 카테고리 생성 시도
-          await createDefaultCategories()
-          return
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        if (!res.ok) throw new Error('카테고리 API 응답 오류')
+        const json = await res.json()
+        if (Array.isArray(json?.categories) && json.categories.length > 0) {
+          setCategories(json.categories)
+        } else {
+          throw new Error('카테고리 데이터 없음')
         }
-        
-        console.log('로드된 카테고리:', data)
-        
-        // 카테고리가 없으면 기본 카테고리 생성
-        if (!data || data.length === 0) {
-          console.log('카테고리가 없어 기본 카테고리를 생성합니다.')
-          await createDefaultCategories()
-          return
-        }
-        
-        setCategories(data)
       } catch (err) {
-        console.error('카테고리 로드 중 예외:', err)
-        // 오류 시 기본 카테고리 사용
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-      }
-    }
-    
-    // 기본 카테고리 생성 함수
-    const createDefaultCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .insert(CATEGORIES)
-          .select()
-        
-        if (error) {
-          console.error('기본 카테고리 생성 오류:', error)
-          // 생성 실패 시 임시 카테고리 사용
-          setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-          return
-        }
-        
-        console.log('기본 카테고리 생성 완료:', data)
-        setCategories(data)
-        
+        console.error('카테고리 로드 실패:', err)
         toast({
-          title: "초기 설정 완료",
-          description: "기본 카테고리가 생성되었습니다.",
+          variant: 'destructive',
+          title: '카테고리 로드 실패',
+          description: '카테고리를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.',
         })
-      } catch (err) {
-        console.error('기본 카테고리 생성 중 예외:', err)
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
       }
     }
-    
     loadCategories()
   }, [])
 
@@ -672,77 +633,36 @@ export default function NewPostPage() {
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         published_at: publish ? new Date().toISOString() : null,
-        views: 0
+        views: 0,
+        // 서버에서 안전하게 매핑할 수 있도록 이름도 함께 전달
+        category_name: category
       }
 
       console.log('저장할 아티클 데이터:', JSON.stringify(articleData, null, 2))
       console.log('savedArticleId:', savedArticleId)
 
-      // 1차 시도: 클라이언트 Supabase
-      let result
-      try {
-        if (savedArticleId) {
-          console.log('기존 아티클 업데이트 중...')
-          const { data, error } = await supabase
-            .from('articles')
-            .update(articleData)
-            .eq('id', savedArticleId)
-            .select()
-            .single()
-          result = { data, error }
-        } else {
-          console.log('새 아티클 생성 중...')
-          const { data, error } = await supabase
-            .from('articles')
-            .insert([articleData])
-            .select()
-            .single()
-          result = { data, error }
-        }
-      } catch (clientError) {
-        result = { data: null, error: clientError as any }
+      // 저장/발행 모두 서버 API 우선 사용 (서비스 롤, RLS 회피)
+      let result: { data: any, error: any } = { data: null, error: null }
+      const endpoint = '/api/admin/articles'
+      const method = savedArticleId ? 'PUT' : 'POST'
+      const payload = savedArticleId ? { id: savedArticleId, data: articleData } : articleData
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast({
+          variant: 'destructive',
+          title: publish ? '발행 실패' : '저장 실패',
+          description: `${err.error || res.statusText}`,
+        })
+        setIsSaving(false)
+        return
       }
-
-      // RLS/권한 문제 등 실패 시 서버 API 폴백
-      if (result.error) {
-        const msg = (result.error as any)?.message || ''
-        const code = (result.error as any)?.code || ''
-        const isPermissionIssue = /permission|rls|401|403|42501/i.test(msg) || /42501|PGRST/i.test(code)
-        if (isPermissionIssue) {
-          console.warn('클라이언트 저장 실패, 서버 API로 폴백 시도:', { code, msg })
-          const endpoint = '/api/admin/articles'
-          const method = savedArticleId ? 'PUT' : 'POST'
-          const payload = savedArticleId ? { id: savedArticleId, data: articleData } : articleData
-          const res = await fetch(endpoint, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          })
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}))
-            toast({
-              variant: 'destructive',
-              title: '저장 실패',
-              description: `서버 저장 실패: ${err.error || res.statusText}`,
-            })
-            setIsSaving(false)
-            return
-          }
-          const json = await res.json()
-          result = { data: json.data, error: null }
-        } else {
-          console.error('==== Supabase 에러 상세 정보 ====')
-          console.error('전체 에러 객체:', JSON.stringify(result.error, null, 2))
-          console.error('================================')
-          toast({
-            variant: 'destructive',
-            title: '저장 실패',
-            description: `아티클 저장 중 오류가 발생했습니다: ${(result.error as any).message}`,
-          })
-          setIsSaving(false)
-          return
-        }
-      }
+      const json = await res.json()
+      result = { data: json.data, error: null }
 
       // 성공 시 처리
       if (!savedArticleId && result.data) {

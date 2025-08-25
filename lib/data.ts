@@ -3,9 +3,10 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getImageUrl } from "@/lib/utils"
 
-// 서버 전용 Supabase 클라이언트 (Service Role 키 사용)
+// 서버 전용 Supabase 클라이언트 (Service Role 키 사용 우선)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+export const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
 
 // 환경 변수 확인 로깅
 if (!supabaseUrl) {
