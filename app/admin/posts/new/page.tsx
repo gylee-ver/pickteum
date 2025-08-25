@@ -492,39 +492,7 @@ export default function NewPostPage() {
     }
   }
 
-  // slug 중복 체크 및 고유한 slug 생성 함수
-  const generateUniqueSlug = async (baseSlug: string): Promise<string> => {
-    let finalSlug = baseSlug
-    let counter = 1
-
-    while (true) {
-      // 현재 slug가 이미 존재하는지 확인
-      const { data: existingArticle, error } = await supabase
-        .from('articles')
-        .select('id')
-        .eq('slug', finalSlug)
-        .single()
-
-      // 에러가 발생했다면 (데이터가 없다면) 해당 slug 사용 가능
-      if (error && error.code === 'PGRST116') {
-        return finalSlug
-      }
-
-      // 데이터가 존재한다면 숫자를 붙여서 다시 시도
-      if (existingArticle) {
-        finalSlug = `${baseSlug}-${counter}`
-        counter++
-      } else {
-        return finalSlug
-      }
-
-      // 무한 루프 방지 (최대 100번 시도)
-      if (counter > 100) {
-        finalSlug = `${baseSlug}-${Date.now()}`
-        return finalSlug
-      }
-    }
-  }
+  // 주의: 슬러그 중복 검사는 서버에서 수행(409 반환). 클라이언트는 생성만 합니다.
 
   // 저장 처리
   const handleSave = async (publish = false, force = false) => {
@@ -606,17 +574,15 @@ export default function NewPostPage() {
         return
       }
 
-      // 기본 slug 생성 (저장된 아티클이 없는 경우에만)
+      // 기본 slug 생성 (저장된 아티클이 없는 경우에만) - 중복 검사는 서버에서 처리
       let uniqueSlug = slug
       if (!savedArticleId) {
-        const baseSlug = slug || title.toLowerCase()
+        uniqueSlug = slug || title.toLowerCase()
           .replace(/[^a-z0-9가-힣\s]/g, "")
           .trim()
           .replace(/\s+/g, "-")
           .replace(/-+/g, "-")
           .replace(/^-|-$/g, "")
-
-        uniqueSlug = await generateUniqueSlug(baseSlug)
       }
 
       // Article 데이터 준비
@@ -840,19 +806,14 @@ export default function NewPostPage() {
 
       console.log('✅ 카테고리 ID 확인:', categoryId)
 
-      // 기본 slug 생성
-      const baseSlug = slug || title.toLowerCase()
+      // 기본 slug 생성(서버에서 중복 검사)
+      const uniqueSlug = (slug || title.toLowerCase()
         .replace(/[^a-z0-9가-힣\s]/g, "")
         .trim()
         .replace(/\s+/g, "-")
         .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-
-      console.log('🔗 baseSlug 생성:', baseSlug)
-
-      // 고유한 slug 생성
-      const uniqueSlug = await generateUniqueSlug(baseSlug)
-      console.log('🔗 uniqueSlug 생성:', uniqueSlug)
+        .replace(/^-|-$/g, ""))
+      console.log('🔗 uniqueSlug(클라이언트 생성):', uniqueSlug)
 
       // Article 데이터 준비 (예약 발행용)
       const articleData = {

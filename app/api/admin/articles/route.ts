@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingError) {
-      return NextResponse.json({ error: existingError.message }, { status: 500 })
+      return NextResponse.json({ error: `slug 확인 실패: ${existingError.message}` }, { status: 500 })
     }
 
     if (existing && existing.length > 0) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: `DB insert 실패: ${error.message}` }, { status: 500 })
     }
 
     // 캐시 무효화
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: `DB update 실패: ${error.message}` }, { status: 500 })
     }
 
     // 캐시 무효화
