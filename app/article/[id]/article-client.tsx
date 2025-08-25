@@ -293,10 +293,10 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
               <div className="flex items-center text-sm text-[#767676]" role="contentinfo">
                 <span>{article.author}</span>
                 <span className="mx-2">·</span>
-                <time dateTime={article.published_at || article.created_at}>
-                  {article.published_at ? 
-                    format(new Date(article.published_at), 'yyyy.MM.dd', { locale: ko }) : 
-                    format(new Date(article.created_at), 'yyyy.MM.dd', { locale: ko })
+                <time dateTime={(article as any).published_at || (article as any).created_at || (article as any).date}>
+                  {(article as any).published_at ? 
+                    format(new Date((article as any).published_at), 'yyyy.MM.dd', { locale: ko }) : 
+                    format(new Date((article as any).created_at || (article as any).date), 'yyyy.MM.dd', { locale: ko })
                   }
                 </time>
                 {article.views && (
@@ -334,7 +334,7 @@ export default function ArticleClient({ articleId, initialArticle }: ArticleClie
             {/* 🔥 SEO 최적화된 아티클 본문 */}
             <section
               className="prose prose-sm max-w-none text-[#333333] article-content"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              dangerouslySetInnerHTML={{ __html: (article as any).content || '' }}
               role="main"
               aria-label="아티클 본문"
             />

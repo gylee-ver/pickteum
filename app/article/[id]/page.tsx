@@ -106,19 +106,26 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     .eq('id', article.id)
     .then()
 
+  // 렌더용 필드 정규화 (클라이언트 컴포넌트 호환)
+  const renderArticle = {
+    ...article,
+    published_at: (article as any).published_at || (article as any).publishedAt || (article as any).date || new Date().toISOString(),
+    created_at: (article as any).created_at || (article as any).publishedAt || (article as any).date || new Date().toISOString(),
+  }
+
   return (
     <>
       {(() => {
         const schemaArticle = {
-          id: article.id,
-          title: article.title,
-          content: article.content || '',
+          id: renderArticle.id,
+          title: renderArticle.title,
+          content: (renderArticle as any).content || '',
           seo_description: undefined as string | undefined,
-          published_at: (article as any).published_at || (article as any).publishedAt || new Date().toISOString(),
-          updated_at: (article as any).updated_at || (article as any).publishedAt || new Date().toISOString(),
-          thumbnail_url: (article as any).thumbnail || (article as any).thumbnail_url,
-          category: { name: article.category?.name || '뉴스' },
-          author: (article as any).author || '픽틈'
+          published_at: (renderArticle as any).published_at,
+          updated_at: (renderArticle as any).updated_at || (renderArticle as any).published_at,
+          thumbnail_url: (renderArticle as any).thumbnail || (renderArticle as any).thumbnail_url,
+          category: { name: renderArticle.category?.name || '뉴스' },
+          author: (renderArticle as any).author || '픽틈'
         }
         return <ArticleSchema article={schemaArticle} />
       })()}
@@ -126,17 +133,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       <noscript>
         <article className="px-4 py-6">
           <header className="mb-4">
-            <h1 className="text-xl font-bold text-[#212121] mb-2 leading-tight">{article.title}</h1>
+            <h1 className="text-xl font-bold text-[#212121] mb-2 leading-tight">{renderArticle.title}</h1>
           </header>
           <section
             className="prose prose-sm max-w-none text-[#333333] article-content"
-            dangerouslySetInnerHTML={{ __html: (article as any).content || '' }}
+            dangerouslySetInnerHTML={{ __html: (renderArticle as any).content || '' }}
           />
         </article>
       </noscript>
 
       {/* 기존 상호작용/트래킹/내부링크 UI는 그대로 유지 */}
-      <ArticleClient articleId={id} initialArticle={article} />
+      <ArticleClient articleId={id} initialArticle={renderArticle} />
     </>
   )
 }
