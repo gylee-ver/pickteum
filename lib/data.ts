@@ -141,25 +141,59 @@ export async function getArticles(params: {
  * 서버 전용: 단일 아티클 가져오기
  */
 export async function getArticleById(id: string): Promise<Article | null> {
-  const { data: article, error } = await supabaseServer
-    .from('articles')
-    .select(`
-      id,
-      title,
-      content,
-      thumbnail,
-      published_at,
-      created_at,
-      slug,
-      category_id,
-      views,
-      meta_title,
-      meta_description,
-      categories(name, color)
-    `)
-    .or(`id.eq.${id},slug.eq.${id}`)
-    .eq('status', 'published')
-    .single()
+  // UUID vs slug 구분: slug 중복 시 최신 발행글을 선택해야 함
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+  let article: any = null
+  let error: any = null
+
+  if (isUUID) {
+    const { data, error: err } = await supabaseServer
+      .from('articles')
+      .select(`
+        id,
+        title,
+        content,
+        thumbnail,
+        published_at,
+        created_at,
+        updated_at,
+        slug,
+        category_id,
+        views,
+        author,
+        categories(name, color)
+      `)
+      .eq('id', id)
+      .eq('status', 'published')
+      .single()
+    article = data
+    error = err
+  } else {
+    // slug 중복 안전: 최신 발행 순으로 1개만 선택
+    const { data, error: err } = await supabaseServer
+      .from('articles')
+      .select(`
+        id,
+        title,
+        content,
+        thumbnail,
+        published_at,
+        created_at,
+        updated_at,
+        slug,
+        category_id,
+        views,
+        author,
+        categories(name, color)
+      `)
+      .eq('slug', id)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(1)
+    article = data?.[0] || null
+    error = err
+  }
 
   if (error) {
     console.error('getArticleById 오류:', error)
