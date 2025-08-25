@@ -553,26 +553,79 @@ export default function EditPostPage() {
 
       console.log('수정할 아티클 데이터:', articleData)
 
-      // Supabase에서 아티클 업데이트
-      const { data, error } = await supabase
-        .from('articles')
-        .update(articleData)
-        .eq('id', articleId)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('아티클 수정 오류:', error)
-        toast({
-          variant: "destructive",
-          title: "저장 실패",
-          description: `아티클 수정 중 오류가 발생했습니다: ${error.message}`,
+      // 발행 또는 예약 변경은 서버 API 우선(서비스 롤)으로 처리하여 RLS 영향 회피
+      let updateData: any = null
+      if (publish || forceStatus) {
+        const res = await fetch('/api/admin/articles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: articleId, data: articleData })
         })
-        setIsSaving(false)
-        return
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast({
+            variant: 'destructive',
+            title: '저장 실패',
+            description: `서버 저장 실패: ${err.error || res.statusText}`,
+          })
+          setIsSaving(false)
+          return
+        }
+        const json = await res.json()
+        updateData = json.data
+      } else {
+        // 일반 저장은 기존대로 클라이언트 Supabase 우선 시도
+        let updateError: any = null
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .update(articleData)
+            .eq('id', articleId)
+            .select()
+            .single()
+          updateData = data
+          updateError = error
+        } catch (e: any) {
+          updateError = e
+        }
+
+        // 실패 시 서버 API 폴백
+        if (updateError) {
+          const msg = updateError?.message || ''
+          const code = updateError?.code || ''
+          const isPermissionIssue = /permission|rls|401|403|42501/i.test(msg) || /42501|PGRST/i.test(code)
+          if (isPermissionIssue) {
+            const res = await fetch('/api/admin/articles', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: articleId, data: articleData })
+            })
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}))
+              toast({
+                variant: 'destructive',
+                title: '저장 실패',
+                description: `서버 저장 실패: ${err.error || res.statusText}`,
+              })
+              setIsSaving(false)
+              return
+            }
+            const json = await res.json()
+            updateData = json.data
+          } else {
+            console.error('아티클 수정 오류:', updateError)
+            toast({
+              variant: 'destructive',
+              title: '저장 실패',
+              description: `아티클 수정 중 오류가 발생했습니다: ${msg}`,
+            })
+            setIsSaving(false)
+            return
+          }
+        }
       }
 
-      console.log('아티클 수정 성공:', data)
+      console.log('아티클 수정 성공:', updateData)
       setLastSaved(new Date().toLocaleTimeString())
 
       if (publish) {

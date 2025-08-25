@@ -101,66 +101,27 @@ export default function NewPostPage() {
     }
   }
 
-  // 카테고리 데이터 로드
+  // 카테고리 데이터 로드 (서버 API 사용: UUID 보장)
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-        
-        if (error) {
-          console.error('카테고리 로드 오류:', error)
-          // 오류 시 기본 카테고리 생성 시도
-          await createDefaultCategories()
-          return
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        if (!res.ok) throw new Error('카테고리 API 응답 오류')
+        const json = await res.json()
+        if (Array.isArray(json?.categories) && json.categories.length > 0) {
+          setCategories(json.categories)
+        } else {
+          throw new Error('카테고리 데이터 없음')
         }
-        
-        console.log('로드된 카테고리:', data)
-        
-        // 카테고리가 없으면 기본 카테고리 생성
-        if (!data || data.length === 0) {
-          console.log('카테고리가 없어 기본 카테고리를 생성합니다.')
-          await createDefaultCategories()
-          return
-        }
-        
-        setCategories(data)
       } catch (err) {
-        console.error('카테고리 로드 중 예외:', err)
-        // 오류 시 기본 카테고리 사용
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-      }
-    }
-    
-    // 기본 카테고리 생성 함수
-    const createDefaultCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .insert(CATEGORIES)
-          .select()
-        
-        if (error) {
-          console.error('기본 카테고리 생성 오류:', error)
-          // 생성 실패 시 임시 카테고리 사용
-          setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
-          return
-        }
-        
-        console.log('기본 카테고리 생성 완료:', data)
-        setCategories(data)
-        
+        console.error('카테고리 로드 실패:', err)
         toast({
-          title: "초기 설정 완료",
-          description: "기본 카테고리가 생성되었습니다.",
+          variant: 'destructive',
+          title: '카테고리 로드 실패',
+          description: '카테고리를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.',
         })
-      } catch (err) {
-        console.error('기본 카테고리 생성 중 예외:', err)
-        setCategories(CATEGORIES.map((cat, index) => ({ id: index + 1, ...cat })))
       }
     }
-    
     loadCategories()
   }, [])
 
@@ -672,54 +633,39 @@ export default function NewPostPage() {
         seo_description: seoDescription || '',
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         published_at: publish ? new Date().toISOString() : null,
-        views: 0
+        views: 0,
+        // 서버에서 안전하게 매핑할 수 있도록 이름도 함께 전달
+        category_name: category
       }
 
       console.log('저장할 아티클 데이터:', JSON.stringify(articleData, null, 2))
       console.log('savedArticleId:', savedArticleId)
 
-      let result
-
-      if (savedArticleId) {
-        // 기존 아티클 업데이트
-        console.log('기존 아티클 업데이트 중...')
-        const { data, error } = await supabase
-          .from('articles')
-          .update(articleData)
-          .eq('id', savedArticleId)
-          .select()
-          .single()
-
-        result = { data, error }
-      } else {
-        // 새 아티클 생성
-        console.log('새 아티클 생성 중...')
-        const { data, error } = await supabase
-          .from('articles')
-          .insert([articleData])
-          .select()
-          .single()
-
-        result = { data, error }
-      }
-
-      if (result.error) {
-        console.error('==== Supabase 에러 상세 정보 ====')
-        console.error('전체 에러 객체:', JSON.stringify(result.error, null, 2))
-        console.error('================================')
-        
+      // 저장/발행 모두 서버 API 우선 사용 (서비스 롤, RLS 회피)
+      let result: { data: any, error: any } = { data: null, error: null }
+      const endpoint = '/api/admin/articles'
+      const method = savedArticleId ? 'PUT' : 'POST'
+      const payload = savedArticleId ? { id: savedArticleId, data: articleData } : articleData
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
         toast({
-          variant: "destructive",
-          title: "저장 실패",
-          description: `아티클 저장 중 오류가 발생했습니다: ${result.error.message}`,
+          variant: 'destructive',
+          title: publish ? '발행 실패' : '저장 실패',
+          description: `${err.error || res.statusText}`,
         })
-        
         setIsSaving(false)
         return
       }
+      const json = await res.json()
+      result = { data: json.data, error: null }
 
       // 성공 시 처리
-      if (!savedArticleId) {
+      if (!savedArticleId && result.data) {
         setSavedArticleId(result.data.id)
         setSlug(uniqueSlug)
       }
@@ -926,34 +872,26 @@ export default function NewPostPage() {
 
       console.log('📄 예약 발행 아티클 데이터:', JSON.stringify(articleData, null, 2))
 
-      // Supabase에 아티클 저장
-      console.log('💾 Supabase에 저장 시작...')
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([articleData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ 예약 발행 저장 오류:', error)
-        
-        if (error.code === '23505' && error.message.includes('articles_slug_key')) {
-          toast({
-            variant: "destructive",
-            title: "URL 슬러그 중복",
-            description: "유사한 제목의 글이 이미 존재합니다. 제목을 조금 수정해주세요.",
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "예약 발행 실패",
-            description: `아티클 예약 발행 중 오류가 발생했습니다: ${error.message}`,
-          })
-        }
-        
+      // 저장 - 서버 API 우선 사용 (RLS 회피)
+      console.log('💾 서버 API로 예약 발행 저장 시작...')
+      const res = await fetch('/api/admin/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(articleData)
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('❌ 예약 발행 서버 저장 오류:', err)
+        const message = err?.error || res.statusText
+        toast({
+          variant: 'destructive',
+          title: '예약 발행 실패',
+          description: message.includes('slug') ? 'URL 슬러그가 중복되었습니다. 제목을 조금 수정해주세요.' : `아티클 예약 발행 중 오류가 발생했습니다: ${message}`,
+        })
         setIsSaving(false)
         return
       }
+      const { data } = await res.json()
 
       console.log('✅ 예약 발행 성공:', data)
 

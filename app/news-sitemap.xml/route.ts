@@ -8,7 +8,7 @@ export async function GET() {
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
     // 1차: 48 시간 내 기사
-    let { data: recentArticles, error } = await supabase
+    const { data: initialArticles } = await supabase
       .from('articles')
       .select(`
         id, 
@@ -26,6 +26,7 @@ export async function GET() {
       .limit(1000) // Google 뉴스 사이트맵 제한
 
     // 🔥 2차: 데이터가 없거나 1차 쿼리 오류가 있을 때 → 최신 10 개 기사로 대체
+    let recentArticles = initialArticles
     if (!recentArticles || recentArticles.length === 0) {
       const { data: fallbackArticles } = await supabase
         .from('articles')

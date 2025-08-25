@@ -1,27 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils'
+import { supabaseServer } from '@/lib/data'
 
-// 환경 변수 체크
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  logger.warn('Supabase 환경 변수가 설정되지 않았습니다.')
-}
-
-const supabase = createClient(supabaseUrl!, supabaseKey!)
+// 서버 키 사용: lib/data의 supabaseServer 활용
 
 export async function POST(request: NextRequest) {
-  // 환경 변수가 없으면 에러 대신 경고 반환
-  if (!supabaseUrl || !supabaseKey) {
-    logger.warn('Supabase 환경 변수가 설정되지 않았습니다.')
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Supabase configuration missing',
-      message: '환경 변수를 확인해주세요.' 
-    }, { status: 500 })
-  }
 
   try {
     logger.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
@@ -30,7 +13,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString()
     
     // 예약된 상태이면서 발행 시간이 현재 시간보다 과거인 글들 조회
-    const { data: scheduledArticles, error: fetchError } = await supabase
+    const { data: scheduledArticles, error: fetchError } = await supabaseServer
       .from('articles')
       .select('id, title, published_at')
       .eq('status', 'scheduled')
@@ -62,7 +45,7 @@ export async function POST(request: NextRequest) {
     // 예약된 글들을 발행 상태로 변경
     const articleIds = scheduledArticles.map(article => article.id)
     
-    const { data: updatedArticles, error: updateError } = await supabase
+    const { data: updatedArticles, error: updateError } = await supabaseServer
       .from('articles')
       .update({ 
         status: 'published',
@@ -108,7 +91,7 @@ export async function GET() {
     logger.log('🕐 예약 발행 체크 시작:', new Date().toISOString())
     
     // 현재 시간보다 이전에 예약된 글들 조회
-    const { data: scheduledArticles, error: fetchError } = await supabase
+    const { data: scheduledArticles, error: fetchError } = await supabaseServer
       .from('articles')
       .select('id, title, published_at')
       .eq('status', 'scheduled')
@@ -139,7 +122,7 @@ export async function GET() {
     // 글들을 published 상태로 변경
     const articleIds = scheduledArticles.map(article => article.id)
     
-    const { data: updatedArticles, error: updateError } = await supabase
+    const { data: updatedArticles, error: updateError } = await supabaseServer
       .from('articles')
       .update({ 
         status: 'published',
